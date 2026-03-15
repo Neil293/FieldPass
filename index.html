@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SCC Backflow Device Register</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
 :root{--bg:#f2f1ed;--surface:#fff;--surface2:#f0efe9;--border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.05);--text:#1c1c1a;--text2:#666660;--text3:#9c9c94;--accent:#1a4d6e;--accent-light:#e6f0f7;--red:#b83232;--red-bg:#fdf0f0;--amber:#a05a00;--amber-bg:#fef6e6;--green:#1a6636;--green-bg:#eaf4ee;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--r:10px;--rl:16px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -107,6 +108,8 @@ tbody tr:hover .row-acts{opacity:1}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:#fff;font-size:13px;font-weight:500;padding:10px 16px;border-radius:var(--r);z-index:999;transform:translateY(16px);opacity:0;transition:all .22s;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border-top:1px solid var(--border2);margin-top:2rem}
+.mfbtn{font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);cursor:pointer;white-space:nowrap;transition:all .15s}
+.mfbtn.active{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.5);color:#fff;font-weight:600}
 @media(max-width:700px){
   /* ── Layout ── */
   nav{padding:0 1rem;height:52px}
@@ -288,6 +291,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   <div class="nav-right">
     <span id="nav-user-info" style="font-size:12px;opacity:.8;white-space:nowrap"></span>
     <button class="nbtn" id="nav-users-btn" onclick="openSettings('users')" style="display:none">&#9881; Settings</button>
+    <button class="nbtn" onclick="openMapView()" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5.5" r="3" stroke="white" stroke-width="1.3"/><path d="M6.5 12C6.5 12 2 8.5 2 5.5a4.5 4.5 0 019 0C11 8.5 6.5 12 6.5 12z" stroke="white" stroke-width="1.3" fill="none"/></svg> Map</button>
     <button class="nbtn" id="nav-reset-btn" onclick="resetToSeedData()" style="display:none;background:rgba(184,50,50,.25);border-color:rgba(255,255,255,.3)" title="Reset all device data to defaults">&#8635; Reset data</button>
     <button class="nbtn" id="nav-export-btn" onclick="exportCSV()">&#8595; Export CSV</button>
     <button class="nbtn nbtn-p" id="nav-add-btn" onclick="openAdd()">+ Add device</button>
@@ -732,6 +736,10 @@ function load(){
   const currentMonthName=MONTH_NAMES[new Date().getMonth()];
   document.getElementById('f-sched-month').value=currentMonthName;
   render();
+  // If map is open, refresh its markers
+  if(leafletMap&&document.getElementById('map-modal').style.display!=='none'){
+    refreshMapMarkers();
+  }
 }
 
 function resetToSeedData(){
@@ -1927,7 +1935,164 @@ function resetUserPass(i){
 }
 // ────────────────────────────────────────────────────────
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeAdd();closeWizard();closeUserMgmt();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeAdd();closeWizard();closeUserMgmt();closeMapView();}});
+
+// ── Map View ─────────────────────────────────────────────
+let leafletMap=null;
+let mapMarkers=[];
+let mapFilter='all';
+let userLocationMarker=null;
+
+const MAP_COLOURS={
+  overdue:'#c0392b',
+  due:'#e67e22',
+  upcoming:'#2980b9',
+  pending:'#888888',
+  complete:'#27ae60'
+};
+
+function makeMarkerIcon(colour,size=16){
+  const s=size, r=s/2;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${s+8}" height="${s+12}" viewBox="0 0 ${s+8} ${s+12}">
+    <path d="M${r+4} ${s+10} C${r+4} ${s+10} 2 ${r+7} 2 ${r+4} a${r+2} ${r+2} 0 1 1 ${s+4} 0 C${s+6} ${r+7} ${r+4} ${s+10} ${r+4} ${s+10}z" fill="${colour}" stroke="white" stroke-width="1.5"/>
+    <circle cx="${r+4}" cy="${r+4}" r="${r-2}" fill="white" opacity=".4"/>
+  </svg>`;
+  return L.divIcon({
+    html:svg, className:'',
+    iconSize:[s+8,s+12], iconAnchor:[r+4,s+12], popupAnchor:[0,-(s+12)]
+  });
+}
+
+function openMapView(){
+  document.getElementById('map-modal').style.display='flex';
+  // Load Leaflet lazily
+  if(!window.L){
+    const script=document.createElement('script');
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    script.onload=()=>initMap();
+    document.head.appendChild(script);
+  } else {
+    initMap();
+  }
+}
+
+function closeMapView(){
+  document.getElementById('map-modal').style.display='none';
+}
+
+function initMap(){
+  if(leafletMap){
+    leafletMap.invalidateSize();
+    refreshMapMarkers();
+    return;
+  }
+  // Find centre from devices with GPS
+  const withGps=devices.filter(d=>d.lat&&d.lng);
+  const centreLat=withGps.length?withGps.reduce((s,d)=>s+d.lat,0)/withGps.length:-35.0;
+  const centreLng=withGps.length?withGps.reduce((s,d)=>s+d.lng,0)/withGps.length:150.5;
+
+  leafletMap=L.map('leaflet-map',{zoomControl:true}).setView([centreLat,centreLng],11);
+
+  // OpenStreetMap tiles — free, no API key
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom:19
+  }).addTo(leafletMap);
+
+  refreshMapMarkers();
+}
+
+function refreshMapMarkers(){
+  if(!leafletMap)return;
+  // Remove old markers
+  mapMarkers.forEach(m=>m.remove());
+  mapMarkers=[];
+
+  const filtered=devices.filter(d=>{
+    if(!d.lat||!d.lng)return false;
+    const s=getStatus(d);
+    if(s==='complete')return false; // never show complete
+    if(mapFilter==='all')return true;
+    return s===mapFilter;
+  });
+
+  document.getElementById('map-count').textContent=`${filtered.length} device${filtered.length!==1?'s':''} shown`;
+
+  filtered.forEach(d=>{
+    const s=getStatus(d);
+    const colour=MAP_COLOURS[s]||MAP_COLOURS.pending;
+    const icon=makeMarkerIcon(colour);
+
+    const marker=L.marker([d.lat,d.lng],{icon}).addTo(leafletMap);
+
+    // Build popup
+    const statusLabel={overdue:'⚠ Overdue',due:'📅 Due this month',upcoming:'🔜 Upcoming',pending:'⏳ Pending'}[s]||s;
+    const popup=L.popup({maxWidth:260,className:'bf-popup'}).setContent(`
+      <div style="font-family:-apple-system,sans-serif;min-width:200px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:2px">${d.suburb}</div>
+        <div style="font-size:11px;color:#666;margin-bottom:6px">${d.make} ${d.model} — ${d.size}mm</div>
+        <div style="font-size:11px;color:#444;margin-bottom:2px">📍 ${d.location.slice(0,80)}${d.location.length>80?'…':''}</div>
+        <div style="font-size:11px;color:#444;margin-bottom:2px">🔢 Serial: <b>${d.serial||'—'}</b></div>
+        <div style="font-size:11px;margin-bottom:8px">
+          <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${colour}22;color:${colour}">${statusLabel}</span>
+          ${d.scheduledMonth?`<span style="font-size:10px;color:#888;margin-left:4px">${d.scheduledMonth}</span>`:''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="openDeviceFromMap(${d.id})" style="flex:1;font-size:12px;font-weight:600;padding:7px;border-radius:8px;border:none;background:#1a4d6e;color:white;cursor:pointer">Open Device</button>
+          <a href="${mapsUrl(d)}" target="_blank" style="flex:1;font-size:12px;font-weight:600;padding:7px;border-radius:8px;border:1px solid #ddd;background:white;color:#1a4d6e;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:3px">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1C3.57 1 2 2.57 2 4.5c0 2.7 3.5 6 3.5 6s3.5-3.3 3.5-6C9 2.57 7.43 1 5.5 1zm0 4.75a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" fill="#1a4d6e"/></svg>
+            Navigate
+          </a>
+        </div>
+      </div>`);
+
+    marker.bindPopup(popup);
+    mapMarkers.push(marker);
+  });
+
+  // If only a few markers, fit bounds
+  if(filtered.length>0&&filtered.length<=200){
+    const bounds=L.latLngBounds(filtered.map(d=>[d.lat,d.lng]));
+    leafletMap.fitBounds(bounds,{padding:[40,40],maxZoom:14});
+  }
+}
+
+function setMapFilter(status, btn){
+  mapFilter=status;
+  document.querySelectorAll('.mfbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  refreshMapMarkers();
+}
+
+function mapLocateMe(){
+  if(!navigator.geolocation){showToast('Geolocation not supported.');return;}
+  const btn=document.getElementById('map-locate-btn');
+  btn.textContent='Locating…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude:lat,longitude:lng}=pos.coords;
+    if(leafletMap){
+      leafletMap.setView([lat,lng],15);
+      if(userLocationMarker) userLocationMarker.remove();
+      userLocationMarker=L.circleMarker([lat,lng],{
+        radius:10,fillColor:'#1a4d6e',fillOpacity:0.9,
+        color:'white',weight:3
+      }).addTo(leafletMap).bindPopup('You are here').openPopup();
+    }
+    btn.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2.5" stroke="white" stroke-width="1.2"/><path d="M6 1v1.5M6 9.5V11M1 6h1.5M9.5 6H11" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg> My location';
+  },()=>{
+    showToast('Could not get your location.');
+    btn.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2.5" stroke="white" stroke-width="1.2"/><path d="M6 1v1.5M6 9.5V11M1 6h1.5M9.5 6H11" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg> My location';
+  });
+}
+
+function openDeviceFromMap(id){
+  closeMapView();
+  openDevice(id);
+}
+
+// Invalidate map size when modal opens (handles flex layout reflow)
+const _origOpenMap=openMapView;
+
 initUsers();
 if(restoreSession()){showApp();}
 // load() is now called inside showApp()
@@ -2003,7 +2168,7 @@ function generateQR(url, deviceName){
 </script>
 <!-- Mobile bottom nav bar -->
 <div id="mobile-nav" style="position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border2);display:none;z-index:100;padding:8px 0 max(8px,env(safe-area-inset-bottom))">
-  <div style="display:grid;grid-template-columns:repeat(4,1fr)">
+  <div style="display:grid;grid-template-columns:repeat(5,1fr)">
     <button onclick="mobileNavScroll('top')" style="font-family:var(--sans);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--text2);font-weight:500">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="var(--accent)" opacity=".8"/><rect x="12" y="2" width="8" height="8" rx="2" fill="var(--accent)" opacity=".4"/><rect x="2" y="12" width="8" height="8" rx="2" fill="var(--accent)" opacity=".4"/><rect x="12" y="12" width="8" height="8" rx="2" fill="var(--accent)" opacity=".4"/></svg>
       Dashboard
@@ -2018,10 +2183,51 @@ function generateQR(url, deviceName){
       </div>
       Add
     </button>
+    <button onclick="openMapView()" style="font-family:var(--sans);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--text2);font-weight:500">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="9" r="4" stroke="var(--accent)" stroke-width="1.6" opacity=".8"/><path d="M11 20C11 20 4 14 4 9a7 7 0 0114 0c0 5-7 11-7 11z" stroke="var(--accent)" stroke-width="1.6" fill="none" opacity=".6"/><circle cx="11" cy="9" r="1.5" fill="var(--accent)"/></svg>
+      Map
+    </button>
     <button onclick="doLogout()" style="font-family:var(--sans);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--text2);font-weight:500">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M8 11h10M14 7l4 4-4 4" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M10 5H5a1 1 0 00-1 1v10a1 1 0 001 1h5" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" opacity=".5"/></svg>
       Sign out
     </button>
+  </div>
+</div>
+
+<!-- Map View Modal -->
+<div id="map-modal" style="display:none;position:fixed;inset:0;z-index:300;flex-direction:column;background:var(--bg)">
+  <!-- Map header -->
+  <div style="background:var(--accent);color:#fff;padding:0 1rem;height:52px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;z-index:10">
+    <div style="font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6.5" r="3" stroke="white" stroke-width="1.4"/><path d="M8 15C8 15 2 10.5 2 6.5a6 6 0 0112 0C14 10.5 8 15 8 15z" stroke="white" stroke-width="1.4" fill="none"/></svg>
+      Device Map
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="map-locate-btn" onclick="mapLocateMe()" style="font-family:var(--sans);font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;cursor:pointer;display:flex;align-items:center;gap:5px">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2.5" stroke="white" stroke-width="1.2"/><path d="M6 1v1.5M6 9.5V11M1 6h1.5M9.5 6H11" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>
+        My location
+      </button>
+      <div id="map-filter-btns" style="display:flex;gap:4px">
+        <button class="mfbtn active" data-status="all" onclick="setMapFilter('all',this)">All</button>
+        <button class="mfbtn" data-status="overdue" onclick="setMapFilter('overdue',this)">Overdue</button>
+        <button class="mfbtn" data-status="due" onclick="setMapFilter('due',this)">Due</button>
+        <button class="mfbtn" data-status="upcoming" onclick="setMapFilter('upcoming',this)">Upcoming</button>
+      </div>
+      <button onclick="closeMapView()" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center">&#x2715;</button>
+    </div>
+  </div>
+  <!-- Legend -->
+  <div style="background:var(--surface);border-bottom:1px solid var(--border2);padding:6px 14px;display:flex;align-items:center;gap:14px;flex-shrink:0;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Legend:</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#c0392b;display:inline-block"></span>Overdue</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#e67e22;display:inline-block"></span>Due this month</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#2980b9;display:inline-block"></span>Upcoming</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#888;display:inline-block"></span>No date set</span>
+    <span id="map-count" style="margin-left:auto;font-size:12px;color:var(--text3)"></span>
+  </div>
+  <!-- Map container -->
+  <div id="map-container" style="flex:1;position:relative">
+    <div id="leaflet-map" style="width:100%;height:100%"></div>
   </div>
 </div>
 

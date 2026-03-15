@@ -225,6 +225,8 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   .nav-right .nbtn:not(#nav-users-btn):not(#nav-reset-btn):not(#nav-export-btn){display:none!important}
   /* Compact nav right */
   #nav-export-btn::before{content:'↓';margin-right:3px}
+  /* Client switcher on mobile - scroll horizontally */
+  #client-switcher{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:1!important;max-width:40vw}
 
 }
 
@@ -280,8 +282,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <div class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h10M2 10h6" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
-    SCC <span class="nav-full">Backflow Device Register</span><span class="nav-short" style="display:none">Backflow</span>
+    SCC <span class="nav-full" id="nav-client-name">Backflow Device Register</span><span class="nav-short" style="display:none">Backflow</span>
   </div>
+  <div id="client-switcher" style="display:none;gap:6px;align-items:center;flex-shrink:0"></div>
   <div class="nav-right">
     <span id="nav-user-info" style="font-size:12px;opacity:.8;white-space:nowrap"></span>
     <button class="nbtn" id="nav-users-btn" onclick="openSettings('users')" style="display:none">&#9881; Settings</button>
@@ -294,7 +297,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 <main>
   <div class="page-hdr">
     <h1>Backflow Prevention Devices</h1>
-    <p>Shoalhaven City Council &mdash; Annual testing compliance register</p>
+    <p id="page-subtitle">Backflow Prevention Device Register</p>
   </div>
   <div id="alert-area"></div>
   <div class="metrics" id="metrics"></div>
@@ -554,6 +557,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         <button class="stab" id="stab-client" onclick="switchSettingsTab('client')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 18px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2)">
           🏢 Client Info
         </button>
+        <button class="stab" id="stab-clients" onclick="switchSettingsTab('clients')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 18px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2)">
+          🗂 Clients
+        </button>
       </div>
     </div>
 
@@ -631,6 +637,24 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       </div>
     </div>
 
+    <!-- Clients tab -->
+    <div id="settings-pane-clients" style="display:none;padding:1.25rem 1.5rem 1.5rem;max-height:75vh;overflow-y:auto">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1.25rem">Manage clients. Each client has its own device register. Switch between clients using the nav bar.</p>
+      <div id="clients-list" style="margin-bottom:1.5rem"></div>
+      <div style="border-top:1px solid var(--border2);padding-top:1.25rem">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px">Add new client</div>
+        <div class="frow">
+          <div class="field" style="margin:0"><label>Client name</label><input type="text" id="nc-name" placeholder="e.g. Wollongong City Council"></div>
+          <div class="field" style="margin:0"><label>Short name / abbreviation</label><input type="text" id="nc-abbr" placeholder="e.g. WCC" maxlength="8"></div>
+        </div>
+        <div class="frow" style="margin-top:10px">
+          <div class="field" style="margin:0"><label>Accent colour</label><input type="color" id="nc-colour" value="#1a4d6e" style="width:100%;height:38px;padding:2px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer"></div>
+          <div class="field" style="margin:0"><label>Notes</label><input type="text" id="nc-notes" placeholder="Optional notes about this client"></div>
+        </div>
+        <button class="btn btn-p" onclick="addClient()" style="margin-top:12px">Add client</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -642,47 +666,121 @@ const SEED_DATA=window.SEED_DATA||[];
 const KEY='scc_backflow_v7';
 const KEY_OLD='scc_backflow_v6';
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CLIENTS_KEY='bf_clients_v1';
+const ACTIVE_CLIENT_KEY='bf_active_client_v1';
+const SCC_CLIENT_ID='scc';
+
+// ── Client helpers ─────────────────────────────────────
+function getClients(){
+  try{
+    const stored=JSON.parse(localStorage.getItem(CLIENTS_KEY)||'null');
+    if(stored&&stored.length) return stored;
+  }catch(e){}
+  // Default: SCC built-in client
+  return [{
+    id:SCC_CLIENT_ID,
+    name:'Shoalhaven City Council',
+    abbr:'SCC',
+    colour:'#1a4d6e',
+    builtIn:true,
+    notes:''
+  }];
+}
+function saveClients(clients){
+  localStorage.setItem(CLIENTS_KEY,JSON.stringify(clients));
+}
+function getActiveClientId(){
+  return localStorage.getItem(ACTIVE_CLIENT_KEY)||SCC_CLIENT_ID;
+}
+function setActiveClientId(id){
+  localStorage.setItem(ACTIVE_CLIENT_KEY,id);
+}
+function getActiveClient(){
+  const id=getActiveClientId();
+  return getClients().find(c=>c.id===id)||getClients()[0];
+}
+function deviceKeyForClient(clientId){
+  return clientId===SCC_CLIENT_ID?KEY:`bf_devices_${clientId}_v1`;
+}
+
 let devices=[];
 let editId=null;
 
 function load(){
+  const clientId=getActiveClientId();
+  const storageKey=deviceKeyForClient(clientId);
   try{
-    // Try current key first, fall back to old v6 key
-    let r=localStorage.getItem(KEY);
-    if(!r) r=localStorage.getItem(KEY_OLD);
+    let r=localStorage.getItem(storageKey);
+    if(!r&&clientId===SCC_CLIENT_ID) r=localStorage.getItem(KEY_OLD);
     if(r){
       devices=JSON.parse(r);
-      // Migrate: rename 'complex' field to 'suburb' if old data
       let migrated=false;
       devices.forEach(d=>{
-        if(d.complex!==undefined&&d.suburb===undefined){
-          d.suburb=d.complex;
-          delete d.complex;
-          migrated=true;
-        }
+        if(d.complex!==undefined&&d.suburb===undefined){d.suburb=d.complex;delete d.complex;migrated=true;}
+        if(!d.clientId){d.clientId=clientId;migrated=true;}
       });
-      if(migrated||!localStorage.getItem(KEY))save();
+      if(migrated||!localStorage.getItem(storageKey))save();
+    } else {
+      devices=clientId===SCC_CLIENT_ID?SEED_DATA.map(d=>({...d,clientId:SCC_CLIENT_ID})):[];
+      save();
     }
-    else{devices=SEED_DATA.map(d=>({...d}));save();}
-  }catch(e){devices=SEED_DATA.map(d=>({...d}));}
+  }catch(e){
+    devices=clientId===SCC_CLIENT_ID?SEED_DATA.map(d=>({...d,clientId:SCC_CLIENT_ID})):[];
+  }
+  updateClientUI();
   populateSuburbFilter();
-  // Default to current month
   const currentMonthName=MONTH_NAMES[new Date().getMonth()];
   document.getElementById('f-sched-month').value=currentMonthName;
   render();
 }
 
 function resetToSeedData(){
-  if(!confirm('This will replace ALL device data with the default seed data, including pre-filled test results for Feb/March. Your recorded test history will be lost.\n\nAre you sure?'))return;
-  devices=SEED_DATA.map(d=>({...d}));
-  save();
-  populateSuburbFilter();
-  render();
-  showToast('Data reset to defaults.');
+  const client=getActiveClient();
+  if(!confirm(`Reset ALL device data for ${client.name} to defaults?\n\nThis cannot be undone.`))return;
+  if(client.builtIn){
+    devices=SEED_DATA.map(d=>({...d,clientId:SCC_CLIENT_ID}));
+  } else {
+    devices=[];
+  }
+  save();populateSuburbFilter();render();
+  showToast('Data reset.');
 }
 
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify(devices));}catch(e){}
+  const storageKey=deviceKeyForClient(getActiveClientId());
+  try{localStorage.setItem(storageKey,JSON.stringify(devices));}catch(e){}
+}
+
+function switchClient(id){
+  setActiveClientId(id);
+  document.getElementById('search').value='';
+  document.getElementById('f-suburb').value='';
+  document.getElementById('f-status').value='';
+  load();
+}
+
+function updateClientUI(){
+  const client=getActiveClient();
+  const brand=document.getElementById('nav-client-name');
+  if(brand) brand.textContent=client.abbr||client.name;
+  document.documentElement.style.setProperty('--accent',client.colour||'#1a4d6e');
+  const sub=document.querySelector('.page-hdr p');
+  const ci=getClientInfo();
+  if(sub) sub.textContent=(ci.org||client.name)+(ci.dept?' — '+ci.dept:'');
+  renderClientSwitcher();
+}
+
+function renderClientSwitcher(){
+  const el=document.getElementById('client-switcher');
+  if(!el)return;
+  const clients=getClients();
+  const activeId=getActiveClientId();
+  if(clients.length<=1){el.style.display='none';return;}
+  el.style.display='flex';
+  el.innerHTML=clients.map(c=>`
+    <button onclick="switchClient('${c.id}')" style="font-family:var(--sans);font-size:12px;font-weight:${c.id===activeId?'700':'500'};padding:5px 12px;border-radius:20px;border:1px solid ${c.id===activeId?'rgba(255,255,255,.5)':'rgba(255,255,255,.2)'};background:${c.id===activeId?'rgba(255,255,255,.25)':'rgba(255,255,255,.08)'};color:#fff;cursor:pointer;white-space:nowrap;transition:all .15s">
+      ${c.abbr||c.name}
+    </button>`).join('');
 }
 
 function populateSuburbFilter(){
@@ -1193,7 +1291,7 @@ function saveAdd(){
   const lat=parseFloat(document.getElementById('a-lat').value);
   const lng=parseFloat(document.getElementById('a-lng').value);
   devices.push({
-    id:maxId+1,suburb,make,
+    id:maxId+1,suburb,make,clientId:getActiveClientId(),
     model:document.getElementById('a-model').value.trim(),
     size:document.getElementById('a-size').value.trim(),
     serial:document.getElementById('a-serial').value.trim(),
@@ -1234,7 +1332,7 @@ function emailSuburbReport(suburb, evt){
   const failSection=failed.length?`\nDEVICES REQUIRING ATTENTION (${failed.length}):\n`+failed.map(d=>`  ⚠ Serial: ${d.serial} — ${d.make} ${d.model} — ${d.location.slice(0,60)}`).join('\n')+'\n':'';
 
   // Sender / org info from client settings
-  const orgLine=ci.org?(ci.dept?ci.org+' — '+ci.dept:ci.org):'Shoalhaven City Council';
+  const orgLine=ci.org?(ci.dept?ci.org+' — '+ci.dept:ci.org):(getActiveClient().name);
   const senderName=ci.contact||currentUser.name;
   const senderTitle=ci.title?'\n'+ci.title:'';
   const phoneLines=[ci.phone?'Phone: '+ci.phone:'',ci.mobile?'Mobile: '+ci.mobile:''].filter(Boolean).join(' | ');
@@ -1598,7 +1696,7 @@ function showApp(){
   if(expBtn)expBtn.style.display=can('exportCSV')?'':'none';
   const mobAdd=document.getElementById('mob-add-btn');
   if(mobAdd)mobAdd.style.opacity=can('addDevices')?'1':'0.3';
-  updatePageHeader();
+  renderClientSwitcher();
   load();
 }
 
@@ -1667,24 +1765,85 @@ function renderClientPreview(){
 
 function updatePageHeader(){
   const ci=getClientInfo();
-  const sub=document.querySelector('.page-hdr p');
-  if(sub&&ci.org) sub.textContent=(ci.org)+(ci.dept?' — '+ci.dept:'');
+  const client=getActiveClient();
+  const sub=document.getElementById('page-subtitle');
+  if(sub) sub.textContent=(ci.org||client.name)+(ci.dept?' — '+ci.dept:'— Annual testing compliance register');
+}
+
+// ── Client Management ───────────────────────────────────
+function renderClientsList(){
+  const clients=getClients();
+  const activeId=getActiveClientId();
+  const el=document.getElementById('clients-list');
+  if(!el)return;
+  if(!clients.length){el.innerHTML='<p style="color:var(--text3);font-size:13px">No clients yet.</p>';return;}
+  el.innerHTML=clients.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px;background:${c.id===activeId?'var(--accent-light)':'var(--surface)'}">
+      <div style="width:18px;height:18px;border-radius:50%;background:${c.colour||'#1a4d6e'};flex-shrink:0;border:2px solid rgba(0,0,0,.1)"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px">${c.name} <span style="font-size:11px;font-weight:400;color:var(--text3)">${c.abbr||''}</span></div>
+        ${c.notes?`<div style="font-size:11px;color:var(--text3)">${c.notes}</div>`:''}
+        ${c.id===activeId?'<div style="font-size:11px;color:var(--accent);font-weight:600">● Active</div>':''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        ${c.id!==activeId?`<button class="btn" style="font-size:11px;padding:4px 10px" onclick="switchClient('${c.id}');closeUserMgmt()">Switch</button>`:''}
+        ${!c.builtIn?`<button class="btn" style="font-size:11px;padding:4px 10px;color:var(--red)" onclick="deleteClient('${c.id}')">Delete</button>`:'<span style="font-size:11px;color:var(--text3);padding:4px 6px">Built-in</span>'}
+      </div>
+    </div>`).join('');
+}
+
+function addClient(){
+  const name=document.getElementById('nc-name').value.trim();
+  const abbr=document.getElementById('nc-abbr').value.trim();
+  const colour=document.getElementById('nc-colour').value;
+  const notes=document.getElementById('nc-notes').value.trim();
+  if(!name){showToast('Client name is required.');return;}
+  const clients=getClients();
+  // Generate unique id from name
+  const id='client_'+name.toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'')+'_'+Date.now().toString(36);
+  clients.push({id,name,abbr,colour,notes,builtIn:false});
+  saveClients(clients);
+  ['nc-name','nc-abbr','nc-notes'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('nc-colour').value='#1a4d6e';
+  renderClientsList();
+  renderClientSwitcher();
+  showToast(`Client "${name}" added.`);
+}
+
+function deleteClient(id){
+  const clients=getClients();
+  const c=clients.find(x=>x.id===id);
+  if(!c)return;
+  if(!confirm(`Delete client "${c.name}"?\n\nAll device data for this client will be permanently removed.`))return;
+  // Remove device data
+  try{localStorage.removeItem(`bf_devices_${id}_v1`);}catch(e){}
+  // Remove from list
+  saveClients(clients.filter(x=>x.id!==id));
+  // Switch away if this was active
+  if(getActiveClientId()===id) switchClient(SCC_CLIENT_ID);
+  renderClientsList();
+  renderClientSwitcher();
+  showToast(`Client "${c.name}" deleted.`);
 }
 
 function switchSettingsTab(tab){
-  ['users','client'].forEach(t=>{
+  ['users','client','clients'].forEach(t=>{
     document.getElementById('settings-pane-'+t).style.display=t===tab?'block':'none';
     const btn=document.getElementById('stab-'+t);
-    btn.style.borderBottom=t===tab?'2px solid var(--accent)':'2px solid transparent';
-    btn.style.color=t===tab?'var(--accent)':'var(--text2)';
-    btn.style.fontWeight=t===tab?'600':'500';
+    if(btn){
+      btn.style.borderBottom=t===tab?'2px solid var(--accent)':'2px solid transparent';
+      btn.style.color=t===tab?'var(--accent)':'var(--text2)';
+      btn.style.fontWeight=t===tab?'600':'500';
+    }
   });
+  if(tab==='clients') renderClientsList();
 }
 
 function openSettings(tab){
   applyPreset();
   renderUserTable();
   loadClientInfoFields();
+  renderClientsList();
   switchSettingsTab(tab||'users');
   document.getElementById('user-modal').style.display='flex';
 }

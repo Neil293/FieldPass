@@ -267,6 +267,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       Remember me for 60 days
     </label>
     <button class="btn-p btn" style="width:100%;padding:11px;font-size:14px;margin-top:8px" onclick="doLogin()">Sign in</button>
+    <div style="text-align:center;margin-top:14px">
+      <a href="#" onclick="resetAdminAccount(event)" style="font-size:12px;color:var(--text3);text-decoration:none">Reset admin account</a>
+    </div>
   </div>
 </div>
 
@@ -635,16 +638,31 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 <script src="data.js"></script>
 <script>
 // SEED_DATA loaded from data.js
-const SEED_DATA=window.SEED_DATA||[]
+const SEED_DATA=window.SEED_DATA||[];
 const KEY='scc_backflow_v7';
+const KEY_OLD='scc_backflow_v6';
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 let devices=[];
 let editId=null;
 
 function load(){
   try{
-    const r=localStorage.getItem(KEY);
-    if(r){devices=JSON.parse(r);}
+    // Try current key first, fall back to old v6 key
+    let r=localStorage.getItem(KEY);
+    if(!r) r=localStorage.getItem(KEY_OLD);
+    if(r){
+      devices=JSON.parse(r);
+      // Migrate: rename 'complex' field to 'suburb' if old data
+      let migrated=false;
+      devices.forEach(d=>{
+        if(d.complex!==undefined&&d.suburb===undefined){
+          d.suburb=d.complex;
+          delete d.complex;
+          migrated=true;
+        }
+      });
+      if(migrated||!localStorage.getItem(KEY))save();
+    }
     else{devices=SEED_DATA.map(d=>({...d}));save();}
   }catch(e){devices=SEED_DATA.map(d=>({...d}));}
   populateSuburbFilter();
@@ -671,12 +689,12 @@ function populateSuburbFilter(){
   const sel=document.getElementById('f-suburb');
   const prev=sel.value; // preserve current selection if still valid
   const month=document.getElementById('f-sched-month').value;
-  // Only show suburbes that have devices matching the current month filter
+  // Only show suburbs that have devices matching the current month filter
   const source = month ? devices.filter(d=>d.scheduledMonth===month) : devices;
-  const suburbes=[...new Set(source.map(d=>d.suburb))].sort();
-  sel.innerHTML='<option value="">All suburbs</option>'+suburbes.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
+  const suburbs=[...new Set(source.map(d=>d.suburb))].sort();
+  sel.innerHTML='<option value="">All suburbs</option>'+suburbs.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
   // If previous selection is no longer valid, clear it
-  if(prev && !suburbes.includes(prev)) sel.value='';
+  if(prev && !suburbs.includes(prev)) sel.value='';
 }
 
 function populateYearFilter(){
@@ -735,13 +753,13 @@ function render(){
   const fst=document.getElementById('f-status').value;
   const grp=document.getElementById('grp-toggle').checked;
 
-  // Update suburb dropdown to only show suburbes for selected month
+  // Update suburb dropdown to only show suburbs for selected month
   const suburbSel=document.getElementById('f-suburb');
   const prevSuburb=suburbSel.value;
   const source=fsm?devices.filter(d=>d.scheduledMonth===fsm):devices;
-  const suburbes=[...new Set(source.map(d=>d.suburb))].sort();
-  suburbSel.innerHTML='<option value="">All suburbs</option>'+suburbes.map(c=>`<option value="${c}" ${c===prevSuburb?'selected':''}>${c}</option>`).join('');
-  if(prevSuburb&&!suburbes.includes(prevSuburb))suburbSel.value='';
+  const suburbs=[...new Set(source.map(d=>d.suburb))].sort();
+  suburbSel.innerHTML='<option value="">All suburbs</option>'+suburbs.map(c=>`<option value="${c}" ${c===prevSuburb?'selected':''}>${c}</option>`).join('');
+  if(prevSuburb&&!suburbs.includes(prevSuburb))suburbSel.value='';
   const fc=suburbSel.value;
 
   let filtered=devices.filter(d=>{
@@ -830,7 +848,7 @@ function render(){
     `;
   } else {
     document.getElementById('metrics').innerHTML=`
-      <div class="metric"><div class="mlabel">Total devices</div><div class="mval">${total}</div><div class="msub">58 suburbes</div></div>
+      <div class="metric"><div class="mlabel">Total devices</div><div class="mval">${total}</div><div class="msub">58 suburbs</div></div>
       <div class="metric"><div class="mlabel">Overdue</div><div class="mval ${overdue>0?'danger':''}">${overdue}</div><div class="msub">${overdue>0?'Past deadline':'All current'}</div></div>
       <div class="metric"><div class="mlabel">Due this month</div><div class="mval ${due>0?'warn':''}">${due}</div><div class="msub">Complete by end of month</div></div>
       <div class="metric"><div class="mlabel">Complete</div><div class="mval ${pct>0?'ok':''}">${complete}</div><div class="msub">${pct}% done this year</div></div>
@@ -1353,8 +1371,7 @@ function clearEmailHistory(suburb){
   showToast('Email history cleared.');
 }
 
-
-  let modal=document.getElementById('email-report-modal');
+function showEmailModal(subject, body, to='', cc='', suburb=''){
   if(!modal){
     modal=document.createElement('div');
     modal.id='email-report-modal';
@@ -1481,20 +1498,50 @@ function permSummary(p){
 }
 // ────────────────────────────────────────────────────────
 
+function resetAdminAccount(e){
+  if(e)e.preventDefault();
+  const adminPerms={recordTests:true,editDevices:true,addDevices:true,viewHistory:true,exportCSV:true,manageUsers:true};
+  try{
+    const stored=localStorage.getItem('scc_users_v1');
+    const users=stored?JSON.parse(stored).filter(u=>u.username!=='admin'):[];
+    users.unshift({username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:adminPerms});
+    localStorage.setItem('scc_users_v1',JSON.stringify(users));
+  }catch(ex){
+    localStorage.setItem('scc_users_v1',JSON.stringify([{username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:adminPerms}]));
+  }
+  const err=document.getElementById('login-err');
+  err.style.display='block';
+  err.style.background='#eaf4ee';
+  err.style.color='#1a6636';
+  err.style.border='1px solid rgba(26,102,54,.2)';
+  err.textContent='✓ Admin reset! Log in with: admin / admin123';
+  document.getElementById('login-user').value='admin';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-pass').focus();
+}
+
 function initUsers(){
+  // If this is a fresh v7 load (no device data yet), also reset users
+  // so stale hashed passwords from old versions don't block login
   const users=getUsers();
   if(!users.length){
     saveUsers([{username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:PRESETS.admin}]);
-  } else {
-    // Migrate old role-based users to permissions
-    let changed=false;
-    users.forEach(u=>{
-      if(!u.permissions){
-        u.permissions=u.role==='admin'?PRESETS.admin:PRESETS.tester;
-        changed=true;
-      }
-    });
-    if(changed)saveUsers(users);
+    return;
+  }
+  // Migrate old role-based users to permissions
+  let changed=false;
+  users.forEach(u=>{
+    if(!u.permissions){
+      u.permissions=u.role==='admin'?PRESETS.admin:PRESETS.tester;
+      changed=true;
+    }
+  });
+  if(changed)saveUsers(users);
+  // Safety: ensure at least one admin always exists
+  const hasAdmin=users.some(u=>u.permissions&&u.permissions.manageUsers);
+  if(!hasAdmin){
+    users.push({username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:PRESETS.admin});
+    saveUsers(users);
   }
 }
 

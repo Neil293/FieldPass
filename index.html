@@ -156,7 +156,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   td{padding:0;border:none}
   /* Map btn cell */
   td:nth-child(1){grid-column:1;grid-row:1/4;display:flex;align-items:center;justify-content:center;padding:12px 8px 12px 12px;width:44px}
-  /* Complex cell */
+  /* Suburb cell */
   td:nth-child(2){grid-column:2;grid-row:1;padding:12px 8px 2px;font-weight:600;font-size:13px;color:var(--accent)}
   /* Size */
   td:nth-child(3){display:none}
@@ -301,8 +301,8 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <input type="text" id="search" placeholder="Search devices, serial, location&#x2026;" oninput="render()">
     </div>
     <div id="mobile-filter-row">
-    <select id="f-complex" onchange="render()"><option value="">All complexes</option></select>
-    <select id="f-sched-month" onchange="populateComplexFilter();render()">
+    <select id="f-suburb" onchange="render()"><option value="">All suburbs</option></select>
+    <select id="f-sched-month" onchange="populateSuburbFilter();render()">
       <option value="">All scheduled months</option>
       <option value="January">January</option>
       <option value="February">February</option>
@@ -327,7 +327,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     </div>
     <div id="grp-wrap">
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap">
-      <input type="checkbox" id="grp-toggle" onchange="render()" checked style="width:14px;height:14px;accent-color:var(--accent)"> Group by complex
+      <input type="checkbox" id="grp-toggle" onchange="render()" checked style="width:14px;height:14px;accent-color:var(--accent)"> Group by suburb
     </label>
     </div>
     <span class="tcount" id="tcount"></span>
@@ -336,7 +336,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <table>
       <thead><tr>
         <th>Map</th>
-        <th>Complex</th>
+        <th>Suburb</th>
         <th>Size (mm)</th>
         <th>Serial no.</th>
         <th>Backflow ID</th>
@@ -395,7 +395,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <div style="padding-top:10px">
         <div class="info-grid" id="m-info"></div>
         <div class="frow" style="margin-top:10px">
-          <div class="field"><label>Complex</label><input type="text" id="e-complex"></div>
+          <div class="field"><label>Suburb</label><input type="text" id="e-suburb"></div>
           <div class="field"><label>Make</label><input type="text" id="e-make"></div>
         </div>
         <div class="frow">
@@ -469,7 +469,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <button class="mclose" onclick="closeAdd()">&#x2715;</button>
     </div>
     <div class="frow">
-      <div class="field"><label>Complex name</label><input type="text" id="a-complex" placeholder="e.g. NOWRA"></div>
+      <div class="field"><label>Suburb name</label><input type="text" id="a-suburb" placeholder="e.g. NOWRA"></div>
       <div class="field"><label>Make</label><input type="text" id="a-make" placeholder="e.g. Tyco"></div>
     </div>
     <div class="frow">
@@ -636,7 +636,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 <script>
 // SEED_DATA loaded from data.js
 const SEED_DATA=window.SEED_DATA||[]
-const KEY='scc_backflow_v6';
+const KEY='scc_backflow_v7';
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 let devices=[];
 let editId=null;
@@ -647,7 +647,7 @@ function load(){
     if(r){devices=JSON.parse(r);}
     else{devices=SEED_DATA.map(d=>({...d}));save();}
   }catch(e){devices=SEED_DATA.map(d=>({...d}));}
-  populateComplexFilter();
+  populateSuburbFilter();
   // Default to current month
   const currentMonthName=MONTH_NAMES[new Date().getMonth()];
   document.getElementById('f-sched-month').value=currentMonthName;
@@ -658,7 +658,7 @@ function resetToSeedData(){
   if(!confirm('This will replace ALL device data with the default seed data, including pre-filled test results for Feb/March. Your recorded test history will be lost.\n\nAre you sure?'))return;
   devices=SEED_DATA.map(d=>({...d}));
   save();
-  populateComplexFilter();
+  populateSuburbFilter();
   render();
   showToast('Data reset to defaults.');
 }
@@ -667,16 +667,16 @@ function save(){
   try{localStorage.setItem(KEY,JSON.stringify(devices));}catch(e){}
 }
 
-function populateComplexFilter(){
-  const sel=document.getElementById('f-complex');
+function populateSuburbFilter(){
+  const sel=document.getElementById('f-suburb');
   const prev=sel.value; // preserve current selection if still valid
   const month=document.getElementById('f-sched-month').value;
-  // Only show complexes that have devices matching the current month filter
+  // Only show suburbes that have devices matching the current month filter
   const source = month ? devices.filter(d=>d.scheduledMonth===month) : devices;
-  const complexes=[...new Set(source.map(d=>d.complex))].sort();
-  sel.innerHTML='<option value="">All complexes</option>'+complexes.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
+  const suburbes=[...new Set(source.map(d=>d.suburb))].sort();
+  sel.innerHTML='<option value="">All suburbs</option>'+suburbes.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
   // If previous selection is no longer valid, clear it
-  if(prev && !complexes.includes(prev)) sel.value='';
+  if(prev && !suburbes.includes(prev)) sel.value='';
 }
 
 function populateYearFilter(){
@@ -735,18 +735,18 @@ function render(){
   const fst=document.getElementById('f-status').value;
   const grp=document.getElementById('grp-toggle').checked;
 
-  // Update complex dropdown to only show complexes for selected month
-  const complexSel=document.getElementById('f-complex');
-  const prevComplex=complexSel.value;
+  // Update suburb dropdown to only show suburbes for selected month
+  const suburbSel=document.getElementById('f-suburb');
+  const prevSuburb=suburbSel.value;
   const source=fsm?devices.filter(d=>d.scheduledMonth===fsm):devices;
-  const complexes=[...new Set(source.map(d=>d.complex))].sort();
-  complexSel.innerHTML='<option value="">All complexes</option>'+complexes.map(c=>`<option value="${c}" ${c===prevComplex?'selected':''}>${c}</option>`).join('');
-  if(prevComplex&&!complexes.includes(prevComplex))complexSel.value='';
-  const fc=complexSel.value;
+  const suburbes=[...new Set(source.map(d=>d.suburb))].sort();
+  suburbSel.innerHTML='<option value="">All suburbs</option>'+suburbes.map(c=>`<option value="${c}" ${c===prevSuburb?'selected':''}>${c}</option>`).join('');
+  if(prevSuburb&&!suburbes.includes(prevSuburb))suburbSel.value='';
+  const fc=suburbSel.value;
 
   let filtered=devices.filter(d=>{
-    if(q&&![d.complex,d.make,d.model,d.serial,d.location,d.notes||''].join(' ').toLowerCase().includes(q))return false;
-    if(fc&&d.complex!==fc)return false;
+    if(q&&![d.suburb,d.make,d.model,d.serial,d.location,d.notes||''].join(' ').toLowerCase().includes(q))return false;
+    if(fc&&d.suburb!==fc)return false;
     if(fsm&&d.scheduledMonth!==fsm)return false;
     if(fst&&getStatus(d)!==fst)return false;
     return true;
@@ -765,7 +765,7 @@ function render(){
   let html='';
   if(grp){
     const groups={};
-    filtered.forEach(d=>{if(!groups[d.complex])groups[d.complex]=[];groups[d.complex].push(d);});
+    filtered.forEach(d=>{if(!groups[d.suburb])groups[d.suburb]=[];groups[d.suburb].push(d);});
     Object.keys(groups).sort().forEach(cx=>{
       const cxDevices=groups[cx];
       const cxComplete=cxDevices.filter(d=>getStatus(d)==='complete').length;
@@ -773,8 +773,8 @@ function render(){
       const allDone=cxComplete===cxTotal;
       const progColour=allDone?'var(--green)':cxComplete>0?'var(--amber)':'var(--text3)';
 
-      // Email log for this complex
-      const emailHistory=getEmailLogForComplex(cx);
+      // Email log for this suburb
+      const emailHistory=getEmailLogForSuburb(cx);
       const lastSent=emailHistory.length?emailHistory[emailHistory.length-1]:null;
       const sentBadge=lastSent
         ?`<span onclick="showEmailHistory('${cx.replace(/'/g,"\\'")}',event)" style="font-size:11px;color:var(--text3);cursor:pointer;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border2);background:var(--surface2);padding:2px 8px;border-radius:20px;white-space:nowrap" title="Click to view email history">
@@ -783,7 +783,7 @@ function render(){
           </span>`
         :'';
 
-      const emailBtn=allDone?`<button onclick="emailComplexReport('${cx.replace(/'/g,"\\'")}',event)" style="font-family:var(--sans);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(26,102,54,.3);background:var(--green-bg);color:var(--green);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap">
+      const emailBtn=allDone?`<button onclick="emailSuburbReport('${cx.replace(/'/g,"\\'")}',event)" style="font-family:var(--sans);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(26,102,54,.3);background:var(--green-bg);color:var(--green);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap">
         <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x=".5" y="1.5" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M.5 3.5l5 3 5-3" stroke="currentColor" stroke-width="1.1"/></svg>
         ${lastSent?'Resend':'Email report'}
       </button>`:'';
@@ -830,7 +830,7 @@ function render(){
     `;
   } else {
     document.getElementById('metrics').innerHTML=`
-      <div class="metric"><div class="mlabel">Total devices</div><div class="mval">${total}</div><div class="msub">58 complexes</div></div>
+      <div class="metric"><div class="mlabel">Total devices</div><div class="mval">${total}</div><div class="msub">58 suburbes</div></div>
       <div class="metric"><div class="mlabel">Overdue</div><div class="mval ${overdue>0?'danger':''}">${overdue}</div><div class="msub">${overdue>0?'Past deadline':'All current'}</div></div>
       <div class="metric"><div class="mlabel">Due this month</div><div class="mval ${due>0?'warn':''}">${due}</div><div class="msub">Complete by end of month</div></div>
       <div class="metric"><div class="mlabel">Complete</div><div class="mval ${pct>0?'ok':''}">${complete}</div><div class="msub">${pct}% done this year</div></div>
@@ -843,7 +843,7 @@ function render(){
   else ab.innerHTML='';
 }
 
-function deviceRow(d,hideComplex){
+function deviceRow(d,hideSuburb){
   const url=mapsUrl(d);
   const hasGps=!!(d.lat&&d.lng);
   const isComplete=getStatus(d)==='complete';
@@ -853,7 +853,7 @@ function deviceRow(d,hideComplex){
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 0.5C3.07 0.5 1.5 2.07 1.5 4c0 2.5 3.5 6 3.5 6s3.5-3.5 3.5-6C8.5 2.07 6.93 0.5 5 0.5z" fill="currentColor" opacity=".8"/><circle cx="5" cy="4" r="1.2" fill="white"/></svg>
       ${hasGps?'GPS':'Maps'}
     </a></td>
-    <td><span class="cmplx">${hideComplex?'':d.complex}</span></td>
+    <td><span class="cmplx">${hideSuburb?'':d.suburb}</span></td>
     <td>${d.size?d.size+'mm':'-'}</td>
     <td><span class="mono">${d.serial||'-'}</span></td>
     <td><span class="mono" style="color:${d.backflowId?'var(--accent)':'var(--text3)'}">${d.backflowId||'—'}</span></td>
@@ -872,7 +872,7 @@ function openDevice(id){
   if(!d)return;
   editId=id;
   document.getElementById('m-title').textContent=`${d.make} ${d.model}`;
-  document.getElementById('m-sub').textContent=`${d.complex}${d.scheduledMonth?' — Scheduled: '+d.scheduledMonth:''}`;
+  document.getElementById('m-sub').textContent=`${d.suburb}${d.scheduledMonth?' — Scheduled: '+d.scheduledMonth:''}`;
 
   // Tested today button
   const today=new Date().toISOString().slice(0,10);
@@ -941,10 +941,10 @@ function openDevice(id){
   document.getElementById('m-loc-text').textContent=d.location;
   document.getElementById('m-map-link').href=mapsUrl(d);
   // Generate QR code for map link
-  setTimeout(()=>generateQR(mapsUrl(d),d.complex+' — '+d.location.slice(0,40)),50);
+  setTimeout(()=>generateQR(mapsUrl(d),d.suburb+' — '+d.location.slice(0,40)),50);
 
   // Populate editable fields
-  document.getElementById('e-complex').value=d.complex||'';
+  document.getElementById('e-suburb').value=d.suburb||'';
   document.getElementById('e-make').value=d.make||'';
   document.getElementById('e-model').value=d.model||'';
   document.getElementById('e-size').value=d.size||'';
@@ -983,7 +983,7 @@ function saveTest(){
   const d=devices.find(x=>x.id===editId);
   if(!d)return;
   // Save device details
-  d.complex=document.getElementById('e-complex').value.trim().toUpperCase()||d.complex;
+  d.suburb=document.getElementById('e-suburb').value.trim().toUpperCase()||d.suburb;
   d.make=document.getElementById('e-make').value.trim()||d.make;
   d.model=document.getElementById('e-model').value.trim();
   d.size=document.getElementById('e-size').value.trim();
@@ -1007,7 +1007,7 @@ function saveTest(){
     const last=d.testLog[d.testLog.length-1];
     if(!last||last.date!==entry.date||last.result!==entry.result){d.testLog.push(entry);}
   }
-  save();closeModal();populateComplexFilter();render();showToast('Saved.');
+  save();closeModal();populateSuburbFilter();render();showToast('Saved.');
 }
 
 // ── Wizard ──────────────────────────────────────────────
@@ -1168,14 +1168,14 @@ function closeAdd(){document.getElementById('add-modal').style.display='none';}
 function bgAddClose(e){if(e.target===document.getElementById('add-modal'))closeAdd();}
 
 function saveAdd(){
-  const complex=document.getElementById('a-complex').value.trim().toUpperCase();
+  const suburb=document.getElementById('a-suburb').value.trim().toUpperCase();
   const make=document.getElementById('a-make').value.trim();
-  if(!complex||!make){showToast('Complex and make are required.');return;}
+  if(!suburb||!make){showToast('Suburb and make are required.');return;}
   const maxId=devices.reduce((m,d)=>Math.max(m,d.id),0);
   const lat=parseFloat(document.getElementById('a-lat').value);
   const lng=parseFloat(document.getElementById('a-lng').value);
   devices.push({
-    id:maxId+1,complex,make,
+    id:maxId+1,suburb,make,
     model:document.getElementById('a-model').value.trim(),
     size:document.getElementById('a-size').value.trim(),
     serial:document.getElementById('a-serial').value.trim(),
@@ -1187,18 +1187,18 @@ function saveAdd(){
     testResult:document.getElementById('a-result').value,
     notes:document.getElementById('a-notes').value.trim()
   });
-  save();closeAdd();populateComplexFilter();populateYearFilter();render();
+  save();closeAdd();populateSuburbFilter();populateYearFilter();render();
   showToast('Device added.');
-  ['a-complex','a-make','a-model','a-size','a-serial','a-loc','a-lat','a-lng','a-date','a-notes'].forEach(id=>document.getElementById(id).value='');
+  ['a-suburb','a-make','a-model','a-size','a-serial','a-loc','a-lat','a-lng','a-date','a-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('a-result').value='Pending';
   document.getElementById('a-sched').value='';
 }
 
-function emailComplexReport(complex, evt){
+function emailSuburbReport(suburb, evt){
   if(evt){evt.stopPropagation();}
   const ci=getClientInfo();
   const year=new Date().getFullYear();
-  const cxDevices=devices.filter(d=>d.complex===complex);
+  const cxDevices=devices.filter(d=>d.suburb===suburb);
   const tested=cxDevices.filter(d=>getStatus(d)==='complete');
   const failed=tested.filter(d=>d.testResult==='Fail');
   const passed=tested.filter(d=>d.testResult==='Pass');
@@ -1223,12 +1223,12 @@ function emailComplexReport(complex, evt){
   const emailLine=ci.email?'Email: '+ci.email:'';
   const footerNote=ci.footer||'This report was generated from the SCC Backflow Prevention Device Register.\nPlease retain this record for compliance purposes.';
 
-  const subject=`Backflow Testing Complete — ${complex} — ${year}`;
+  const subject=`Backflow Testing Complete — ${suburb} — ${year}`;
   const body=`Hi,
 
 This email confirms that annual backflow prevention device testing has been completed for:
 
-COMPLEX:          ${complex}
+SUBURB:          ${suburb}
 YEAR:             ${year}
 DATE COMPLETED:   ${fmtDate(tested.map(d=>d.testDate).sort().pop())}
 ORGANISATION:     ${orgLine}
@@ -1258,9 +1258,9 @@ ${[phoneLines,emailLine,ci.addr||''].filter(Boolean).join('\n')}`;
   mailto+=`subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
   if(mailto.length>1800){
-    showEmailModal(subject, body, to, cc, complex);
+    showEmailModal(subject, body, to, cc, suburb);
   } else {
-    recordEmailSent(complex, to, cc, subject);
+    recordEmailSent(suburb, to, cc, subject);
     window.location.href=mailto;
   }
 }
@@ -1271,10 +1271,10 @@ function getEmailLog(){
   try{return JSON.parse(localStorage.getItem(EMAIL_LOG_KEY))||{};}catch(e){return{};}
 }
 
-function recordEmailSent(complex, to, cc, subject){
+function recordEmailSent(suburb, to, cc, subject){
   const log=getEmailLog();
-  if(!log[complex])log[complex]=[];
-  log[complex].push({
+  if(!log[suburb])log[suburb]=[];
+  log[suburb].push({
     ts: Date.now(),
     datetime: new Date().toLocaleString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}),
     to: to||'—',
@@ -1286,15 +1286,15 @@ function recordEmailSent(complex, to, cc, subject){
   render(); // refresh group headers to show updated log
 }
 
-function getEmailLogForComplex(complex){
+function getEmailLogForSuburb(suburb){
   const log=getEmailLog();
-  return log[complex]||[];
+  return log[suburb]||[];
 }
 
-function showEmailHistory(complex, evt){
+function showEmailHistory(suburb, evt){
   if(evt) evt.stopPropagation();
-  const history=getEmailLogForComplex(complex);
-  if(!history.length){showToast('No email history for this complex.');return;}
+  const history=getEmailLogForSuburb(suburb);
+  if(!history.length){showToast('No email history for this suburb.');return;}
 
   let modal=document.getElementById('email-history-modal');
   if(!modal){
@@ -1317,7 +1317,7 @@ function showEmailHistory(complex, evt){
     <div class="modal" style="max-width:600px">
       <div class="mhdr">
         <div>
-          <div class="mtitle">Email History — ${complex}</div>
+          <div class="mtitle">Email History — ${suburb}</div>
           <div class="msub-info">${history.length} report${history.length!==1?'s':''} sent</div>
         </div>
         <button class="mclose" onclick="document.getElementById('email-history-modal').style.display='none'">&#x2715;</button>
@@ -1336,17 +1336,17 @@ function showEmailHistory(complex, evt){
         </table>
       </div>
       <div style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center">
-        <button class="btn" style="font-size:12px;color:var(--red);border-color:rgba(184,50,50,.2)" onclick="clearEmailHistory('${complex.replace(/'/g,"\\'")}')">Clear history</button>
+        <button class="btn" style="font-size:12px;color:var(--red);border-color:rgba(184,50,50,.2)" onclick="clearEmailHistory('${suburb.replace(/'/g,"\\'")}')">Clear history</button>
         <button class="btn btn-p" onclick="document.getElementById('email-history-modal').style.display='none'">Close</button>
       </div>
     </div>`;
   modal.style.display='flex';
 }
 
-function clearEmailHistory(complex){
-  if(!confirm(`Clear all email history for ${complex}?`))return;
+function clearEmailHistory(suburb){
+  if(!confirm(`Clear all email history for ${suburb}?`))return;
   const log=getEmailLog();
-  delete log[complex];
+  delete log[suburb];
   localStorage.setItem(EMAIL_LOG_KEY, JSON.stringify(log));
   document.getElementById('email-history-modal').style.display='none';
   render();
@@ -1394,7 +1394,7 @@ function clearEmailHistory(complex){
           let m='mailto:'+encodeURIComponent(toVal)+'?';
           if(ccVal)m+='cc='+encodeURIComponent(ccVal)+'&';
           m+='subject='+encodeURIComponent(s)+'&body='+encodeURIComponent(b);
-          recordEmailSent('${complex.replace(/'/g,"\\'")}', toVal, ccVal, s);
+          recordEmailSent('${suburb.replace(/'/g,"\\'")}', toVal, ccVal, s);
           document.getElementById('email-report-modal').style.display='none';
           window.open(m);
         ">&#9993; Open in mail app</button>
@@ -1404,10 +1404,10 @@ function clearEmailHistory(complex){
 }
 
 function exportCSV(){
-  const rows=[['Complex','Make','Model','Size (mm)','Serial No.','Backflow ID','Location','Latitude','Longitude','Scheduled Month','Last Tested','Test Result','Tested By','Notes']];
+  const rows=[['Suburb','Make','Model','Size (mm)','Serial No.','Backflow ID','Location','Latitude','Longitude','Scheduled Month','Last Tested','Test Result','Tested By','Notes']];
   devices.forEach(d=>{
     const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
-    rows.push([d.complex,d.make,d.model,d.size,d.serial,d.backflowId||'',d.location,d.lat||'',d.lng||'',d.scheduledMonth||'',d.testDate||'',d.testResult||'Pending',lastLog?lastLog.tester:'',d.notes||'']);
+    rows.push([d.suburb,d.make,d.model,d.size,d.serial,d.backflowId||'',d.location,d.lat||'',d.lng||'',d.scheduledMonth||'',d.testDate||'',d.testResult||'Pending',lastLog?lastLog.tester:'',d.notes||'']);
   });
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const a=document.createElement('a');

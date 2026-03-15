@@ -108,12 +108,130 @@ tbody tr:hover .row-acts{opacity:1}
 .toast.show{transform:translateY(0);opacity:1}
 footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border-top:1px solid var(--border2);margin-top:2rem}
 @media(max-width:700px){
-  .metrics{grid-template-columns:repeat(2,1fr)}
-  nav{padding:0 1rem}
-  main{padding:1rem 1rem 3rem}
-  .frow{grid-template-columns:1fr}
-  th:nth-child(4),td:nth-child(4),th:nth-child(8),td:nth-child(8){display:none}
+  /* ── Layout ── */
+  nav{padding:0 1rem;height:52px}
+  .nav-brand{font-size:14px}
+  .nav-brand span.nav-full{display:none}
+  main{padding:0.75rem 0 5rem}
+  .page-hdr{padding:0 1rem;margin-bottom:1rem}
+  .page-hdr h1{font-size:18px}
+  .page-hdr p{font-size:12px}
+
+  /* ── Nav buttons → icon-only bar ── */
+  .nbtn{font-size:11px;padding:5px 9px}
+  #nav-export-btn .btn-label{display:none}
+  #nav-add-btn .btn-label{display:none}
+
+  /* ── Metrics 2-up ── */
+  .metrics{grid-template-columns:repeat(2,1fr);gap:8px;padding:0 1rem;margin-bottom:1rem}
+  .metric{padding:12px 14px}
+  .mval{font-size:24px}
+  .mlabel{font-size:10px}
+
+  /* ── Alerts ── */
+  #alert-area{padding:0 1rem}
+  .alert{font-size:12px;padding:10px 12px}
+
+  /* ── Toolbar → stacked ── */
+  .toolbar{flex-direction:column;align-items:stretch;gap:8px;padding:0 1rem;margin-bottom:8px}
+  .sw{min-width:unset;max-width:unset;width:100%}
+  .sw input[type=text]{width:100%;font-size:14px;padding:10px 10px 10px 34px;border-radius:12px}
+  .toolbar select{width:100%;font-size:14px;padding:10px 28px 10px 12px;border-radius:12px}
+  .toolbar .tcount{margin-left:0;font-size:12px}
+  /* Filters row: 2-up grid */
+  #mobile-filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  /* Group toggle */
+  #grp-wrap{display:flex;align-items:center;gap:8px;font-size:14px}
+
+  /* ── Hide desktop table, show cards ── */
+  .tcard{border-radius:0;border-left:none;border-right:none;background:transparent;border:none;box-shadow:none}
+  table,thead,tbody,th,td,tr{display:block}
+  thead{display:none}
+  tbody tr{border:none;cursor:default;margin:0 1rem 8px;border-radius:14px;background:var(--surface);border:1px solid var(--border2);box-shadow:0 1px 4px rgba(0,0,0,.06);padding:0;overflow:hidden}
+  tbody tr.row-complete{border-left:4px solid #1a6636;background:var(--surface)}
+  tbody tr.row-fail{border-left:4px solid #b83232;background:var(--surface)}
+  tbody tr:hover{background:var(--surface)}
+  /* Card layout via CSS grid inside each row */
+  tbody tr{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto auto;gap:0}
+  td{padding:0;border:none}
+  /* Map btn cell */
+  td:nth-child(1){grid-column:1;grid-row:1/4;display:flex;align-items:center;justify-content:center;padding:12px 8px 12px 12px;width:44px}
+  /* Complex cell */
+  td:nth-child(2){grid-column:2;grid-row:1;padding:12px 8px 2px;font-weight:600;font-size:13px;color:var(--accent)}
+  /* Size */
+  td:nth-child(3){display:none}
+  /* Serial */
+  td:nth-child(4){grid-column:2;grid-row:2;padding:0 8px 2px;font-size:11px;font-family:var(--mono);color:var(--text2)}
+  /* Backflow ID */
+  td:nth-child(5){display:none}
+  /* Location */
+  td:nth-child(6){grid-column:2;grid-row:3;padding:0 8px 10px;font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 120px)}
+  /* Sched month */
+  td:nth-child(7){grid-column:3;grid-row:1;padding:10px 10px 2px;display:flex;align-items:flex-start;justify-content:flex-end}
+  /* Last tested */
+  td:nth-child(8){grid-column:3;grid-row:2;padding:0 10px 2px;font-size:10px;color:var(--text3);text-align:right;white-space:nowrap}
+  /* Result badge */
+  td:nth-child(9){grid-column:3;grid-row:3;padding:0 10px 10px;display:flex;align-items:flex-end;justify-content:flex-end}
+  /* Actions */
+  td:nth-child(10){display:none}
+
+  /* Tap whole card to open — show tap hint */
+  tbody tr{cursor:pointer}
+  .row-acts{display:none}
+
+  /* Group header */
+  .grp-hdr td{grid-column:1/-1;background:var(--bg);font-size:11px;padding:12px 16px 4px;border-radius:0;border:none;color:var(--text3);box-shadow:none;margin:0 !important;border-radius:0 !important;border:none !important}
+  tbody tr.grp-hdr{margin:8px 0 0;border-radius:0;border:none;background:transparent;box-shadow:none}
+
+  /* ── Modals → slide-up sheets ── */
+  .mbg{align-items:flex-end;padding:0;background:rgba(0,0,0,.5)}
+  .modal{border-radius:20px 20px 0 0;width:100%;max-width:100%;max-height:92vh;padding:1.25rem 1.25rem 2rem}
+  /* Sheet drag handle */
+  .modal::before{content:'';display:block;width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1rem}
+  .frow{grid-template-columns:1fr 1fr}
+  .info-grid{grid-template-columns:1fr 1fr}
+  .mval{font-size:22px}
+
+  /* ── Wizard modal ── */
+  #wizard-modal .modal{border-radius:20px 20px 0 0}
+
+  /* ── Bigger touch targets ── */
+  .btn{padding:11px 18px;font-size:14px}
+  .btn-p{padding:12px 20px}
+  .btn-tested{padding:16px;font-size:15px}
+  .rbtn{font-size:13px;padding:8px 14px}
+  .map-btn{padding:6px 10px;font-size:12px}
+  select,input[type=text]{font-size:16px!important} /* prevents iOS zoom */
+
+  /* ── Toast at bottom above nav ── */
+  .toast{bottom:5.5rem;right:1rem;left:1rem;text-align:center}
+
+  /* ── User mgmt table responsive ── */
+  .utbl{font-size:12px}
+  .utbl td,.utbl th{padding:8px 6px}
+  #user-modal .modal{padding:1.25rem 1rem 2rem}
+
+  /* ── QR scanner ── */
+  #qr-modal{padding:0;align-items:flex-end}
+  #qr-modal>div{border-radius:20px 20px 0 0;padding:1.25rem 1.25rem 2rem;max-height:95vh;overflow-y:auto}
+
+  /* ── Bottom nav bar ── */
+  #mobile-nav{display:flex}
+
+  .nav-full{display:none}
+  .nav-short{display:inline!important}
+  /* Hide nav buttons that are in bottom bar */
+  #nav-add-btn{display:none!important}
+  .nav-right .nbtn:not(#nav-users-btn):not(#nav-reset-btn):not(#nav-export-btn){display:none!important}
+  /* Compact nav right */
+  #nav-export-btn::before{content:'↓';margin-right:3px}
+
 }
+
+/* Desktop: hide mobile-only elements */
+#mobile-nav{display:none}
+#mobile-filter-row{display:contents} /* transparent on desktop */
+
 /* ── Auth ── */
 #login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem}
 .login-card{background:var(--surface);border-radius:var(--rl);border:1px solid var(--border2);padding:2.5rem 2rem;width:380px;max-width:100%;box-shadow:0 24px 64px rgba(0,0,0,.1)}
@@ -159,7 +277,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <div class="nav-icon">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h10M2 10h6" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
-    SCC Backflow Device Register
+    SCC <span class="nav-full">Backflow Device Register</span><span class="nav-short" style="display:none">Backflow</span>
   </div>
   <div class="nav-right">
     <span id="nav-user-info" style="font-size:12px;opacity:.8;white-space:nowrap"></span>
@@ -182,8 +300,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <svg class="si" width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       <input type="text" id="search" placeholder="Search devices, serial, location&#x2026;" oninput="render()">
     </div>
+    <div id="mobile-filter-row">
     <select id="f-complex" onchange="render()"><option value="">All complexes</option></select>
-    <select id="f-sched-month" onchange="render()">
+    <select id="f-sched-month" onchange="populateComplexFilter();render()">
       <option value="">All scheduled months</option>
       <option value="January">January</option>
       <option value="February">February</option>
@@ -205,9 +324,12 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <option value="upcoming">Upcoming</option>
       <option value="complete">Complete</option>
     </select>
+    </div>
+    <div id="grp-wrap">
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap">
       <input type="checkbox" id="grp-toggle" onchange="render()" checked style="width:14px;height:14px;accent-color:var(--accent)"> Group by complex
     </label>
+    </div>
     <span class="tcount" id="tcount"></span>
   </div>
   <div class="tcard">
@@ -488,8 +610,14 @@ function save(){
 
 function populateComplexFilter(){
   const sel=document.getElementById('f-complex');
-  const complexes=[...new Set(devices.map(d=>d.complex))].sort();
-  sel.innerHTML='<option value="">All complexes</option>'+complexes.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const prev=sel.value; // preserve current selection if still valid
+  const month=document.getElementById('f-sched-month').value;
+  // Only show complexes that have devices matching the current month filter
+  const source = month ? devices.filter(d=>d.scheduledMonth===month) : devices;
+  const complexes=[...new Set(source.map(d=>d.complex))].sort();
+  sel.innerHTML='<option value="">All complexes</option>'+complexes.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
+  // If previous selection is no longer valid, clear it
+  if(prev && !complexes.includes(prev)) sel.value='';
 }
 
 function populateYearFilter(){
@@ -544,10 +672,18 @@ function fmtDate(d){
 
 function render(){
   const q=document.getElementById('search').value.toLowerCase();
-  const fc=document.getElementById('f-complex').value;
   const fsm=document.getElementById('f-sched-month').value;
   const fst=document.getElementById('f-status').value;
   const grp=document.getElementById('grp-toggle').checked;
+
+  // Update complex dropdown to only show complexes for selected month
+  const complexSel=document.getElementById('f-complex');
+  const prevComplex=complexSel.value;
+  const source=fsm?devices.filter(d=>d.scheduledMonth===fsm):devices;
+  const complexes=[...new Set(source.map(d=>d.complex))].sort();
+  complexSel.innerHTML='<option value="">All complexes</option>'+complexes.map(c=>`<option value="${c}" ${c===prevComplex?'selected':''}>${c}</option>`).join('');
+  if(prevComplex&&!complexes.includes(prevComplex))complexSel.value='';
+  const fc=complexSel.value;
 
   let filtered=devices.filter(d=>{
     if(q&&![d.complex,d.make,d.model,d.serial,d.location,d.notes||''].join(' ').toLowerCase().includes(q))return false;
@@ -1105,6 +1241,11 @@ function restoreSession(){
   }catch(e){return false;}
 }
 
+function mobileNavScroll(target){
+  if(target==='top') window.scrollTo({top:0,behavior:'smooth'});
+  else if(target==='devices') document.querySelector('.tcard').scrollIntoView({behavior:'smooth'});
+}
+
 function showApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
@@ -1112,9 +1253,10 @@ function showApp(){
   document.getElementById('nav-users-btn').style.display=can('manageUsers')?'':'none';
   document.getElementById('nav-reset-btn').style.display=can('manageUsers')?'':'none';
   document.getElementById('nav-add-btn').style.display=can('addDevices')?'':'none';
-  // Export button visibility
   const expBtn=document.getElementById('nav-export-btn');
   if(expBtn)expBtn.style.display=can('exportCSV')?'':'none';
+  const mobAdd=document.getElementById('mob-add-btn');
+  if(mobAdd)mobAdd.style.opacity=can('addDevices')?'1':'0.3';
   load();
 }
 
@@ -1275,7 +1417,30 @@ function generateQR(url, deviceName){
   img.src=apiUrl;
 }
 </script>
-<!-- QR Scanner Modal -->
+<!-- Mobile bottom nav bar -->
+<div id="mobile-nav" style="position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border2);display:none;z-index:100;padding:8px 0 max(8px,env(safe-area-inset-bottom))">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr)">
+    <button onclick="mobileNavScroll('top')" style="font-family:var(--sans);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--text2);font-weight:500">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="var(--accent)" opacity=".8"/><rect x="12" y="2" width="8" height="8" rx="2" fill="var(--accent)" opacity=".4"/><rect x="2" y="12" width="8" height="8" rx="2" fill="var(--accent)" opacity=".4"/><rect x="12" y="12" width="8" height="8" rx="2" fill="var(--accent)" opacity=".4"/></svg>
+      Dashboard
+    </button>
+    <button onclick="mobileNavScroll('devices')" style="font-family:var(--sans);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--text2);font-weight:500">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="5" width="18" height="3" rx="1.5" fill="var(--accent)" opacity=".8"/><rect x="2" y="10" width="18" height="3" rx="1.5" fill="var(--accent)" opacity=".6"/><rect x="2" y="15" width="12" height="3" rx="1.5" fill="var(--accent)" opacity=".4"/></svg>
+      Devices
+    </button>
+    <button onclick="can('addDevices')&&openAdd()" id="mob-add-btn" style="font-family:var(--sans);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--accent);font-weight:600">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-top:-14px;border:3px solid var(--surface);box-shadow:0 2px 8px rgba(26,77,110,.4)">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v12M3 9h12" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      Add
+    </button>
+    <button onclick="doLogout()" style="font-family:var(--sans);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--text2);font-weight:500">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M8 11h10M14 7l4 4-4 4" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M10 5H5a1 1 0 00-1 1v10a1 1 0 001 1h5" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" opacity=".5"/></svg>
+      Sign out
+    </button>
+  </div>
+</div>
+
 <div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:1rem">
   <div style="background:var(--surface);border-radius:16px;padding:20px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.4)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">

@@ -68,9 +68,10 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
 .b-pend{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
 .b-overdue{background:var(--red-bg);color:var(--red)}
 .b-due{background:var(--amber-bg);color:var(--amber)}
-.b-upcoming{background:#eef3fb;color:#2563a8}
-.b-due-next{background:#eaf4ee;color:#1a6636}
+.b-upcoming{background:#dbeeff;color:#1565c0}
+.b-due-next{background:#e3f0ff;color:#1976d2}
 .b-complete{background:var(--green-bg);color:var(--green)}
+.b-failed{background:var(--red-bg);color:var(--red)}
 .alert-info{background:#eef3fb;color:#2563a8;border-color:rgba(37,99,168,.15)}
 .row-acts{display:flex;gap:4px;opacity:0;transition:opacity .15s}
 tbody tr:hover .row-acts{opacity:1}
@@ -334,6 +335,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <option value="due">Due this month</option>
       <option value="due_next">Due next month</option>
       <option value="upcoming">Upcoming</option>
+      <option value="failed">Failed</option>
       <option value="complete">Complete</option>
     </select>
     </div>
@@ -824,14 +826,16 @@ function getStatus(d){
   const currentMonth=now.getMonth(); // 0-indexed
   if(d.testDate){
     const ty=parseInt(d.testDate.slice(0,4));
-    if(ty===currentYear) return'complete';
+    if(ty===currentYear){
+      if(d.testResult==='Fail') return'failed';
+      return'complete';
+    }
   }
   if(!d.scheduledMonth) return'pending';
   const schedIdx=MONTH_NAMES.findIndex(m=>m===d.scheduledMonth);
   if(schedIdx===-1) return'pending';
   if(currentMonth>schedIdx) return'overdue';
   if(currentMonth===schedIdx) return'due';
-  // Due next month
   if(schedIdx===currentMonth+1||(currentMonth===11&&schedIdx===0)) return'due_next';
   return'upcoming';
 }
@@ -844,6 +848,7 @@ function statusBadge(d){
     due_next:'<span class="badge b-due-next"><span class="bdot"></span>Due next month</span>',
     upcoming:'<span class="badge b-upcoming"><span class="bdot"></span>Upcoming</span>',
     complete:'<span class="badge b-complete"><span class="bdot"></span>Complete</span>',
+    failed:'<span class="badge b-failed"><span class="bdot"></span>Failed</span>',
     pending:'<span class="badge b-pend"><span class="bdot"></span>Pending</span>'
   };
   return map[s]||map.pending;
@@ -1947,10 +1952,11 @@ let userLocationMarker=null;
 const MAP_COLOURS={
   overdue:'#c0392b',
   due:'#e67e22',
-  due_next:'#27ae60',
-  upcoming:'#2980b9',
+  due_next:'#1976d2',
+  upcoming:'#64b5f6',
   pending:'#888888',
-  complete:'#27ae60'
+  complete:'#27ae60',
+  failed:'#c0392b'
 };
 
 function makeMarkerIcon(colour,size=16){
@@ -2013,8 +2019,9 @@ function refreshMapMarkers(){
   const filtered=devices.filter(d=>{
     if(!d.lat||!d.lng)return false;
     const s=getStatus(d);
-    if(s==='complete')return false; // never show complete
-    if(mapFilter==='all')return true;
+    if(mapFilter==='all') return s!=='complete'; // all incomplete + failed
+    if(mapFilter==='complete') return s==='complete';
+    if(mapFilter==='failed') return s==='failed';
     return s===mapFilter;
   });
 
@@ -2023,12 +2030,12 @@ function refreshMapMarkers(){
   filtered.forEach(d=>{
     const s=getStatus(d);
     const colour=MAP_COLOURS[s]||MAP_COLOURS.pending;
-    const icon=makeMarkerIcon(colour);
+    const icon=makeMarkerIcon(colour, s==='failed'?20:16);
 
     const marker=L.marker([d.lat,d.lng],{icon}).addTo(leafletMap);
 
     // Build popup
-    const statusLabel={overdue:'⚠ Overdue',due:'📅 Due this month',due_next:'🟢 Due next month',upcoming:'🔜 Upcoming',pending:'⏳ Pending'}[s]||s;
+    const statusLabel={overdue:'⚠ Overdue',due:'📅 Due this month',due_next:'🔵 Due next month',upcoming:'🔷 Upcoming',pending:'⏳ Pending',complete:'✅ Completed',failed:'❌ Failed'}[s]||s;
     const popup=L.popup({maxWidth:260,className:'bf-popup'}).setContent(`
       <div style="font-family:-apple-system,sans-serif;min-width:200px">
         <div style="font-weight:700;font-size:13px;margin-bottom:2px">${d.suburb}</div>
@@ -2215,6 +2222,8 @@ function generateQR(url, deviceName){
         <button class="mfbtn" data-status="due" onclick="setMapFilter('due',this)">Due</button>
         <button class="mfbtn" data-status="due_next" onclick="setMapFilter('due_next',this)">Next month</button>
         <button class="mfbtn" data-status="upcoming" onclick="setMapFilter('upcoming',this)">Upcoming</button>
+        <button class="mfbtn" data-status="failed" onclick="setMapFilter('failed',this)">Failed</button>
+        <button class="mfbtn" data-status="complete" onclick="setMapFilter('complete',this)">Completed</button>
       </div>
       <button onclick="closeMapView()" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center">&#x2715;</button>
     </div>
@@ -2224,9 +2233,11 @@ function generateQR(url, deviceName){
     <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Legend:</span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#c0392b;display:inline-block"></span>Overdue</span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#e67e22;display:inline-block"></span>Due this month</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#27ae60;display:inline-block"></span>Due next month</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#2980b9;display:inline-block"></span>Upcoming</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#1976d2;display:inline-block"></span>Due next month</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#64b5f6;display:inline-block"></span>Upcoming</span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#888;display:inline-block"></span>No date set</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#c0392b;display:inline-block;border:2px solid #fff;outline:1px solid #c0392b"></span>Failed</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#27ae60;display:inline-block"></span>Completed</span>
     <span id="map-count" style="margin-left:auto;font-size:12px;color:var(--text3)"></span>
   </div>
   <!-- Map container -->

@@ -282,7 +282,15 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         </div>
         <div class="frow">
           <div class="field"><label>Serial number</label><input type="text" id="e-serial"></div>
-          <div class="field"><label>Backflow ID</label><input type="text" id="e-backflowid" placeholder="e.g. BF-1234"></div>
+          <div class="field"><label>Backflow ID</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="text" id="e-backflowid" placeholder="e.g. BF-1234" style="flex:1">
+              <button type="button" onclick="openQRScanner()" title="Scan QR code" style="flex-shrink:0;height:36px;padding:0 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--accent);color:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;white-space:nowrap">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="9" y="1" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="1" y="9" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="2.5" y="2.5" width="1" height="1" fill="white"/><rect x="10.5" y="2.5" width="1" height="1" fill="white"/><rect x="2.5" y="10.5" width="1" height="1" fill="white"/><path d="M9 9h1v1H9zM11 9h1v1h-1zM9 11h1v1H9zM11 11h1v1h-1z" fill="white"/></svg>
+                Scan
+              </button>
+            </div>
+          </div>
         </div>
         <div class="field"><label>Scheduled month</label>
             <select id="e-sched">
@@ -839,9 +847,16 @@ function renderWizStep(){
     inputHtml=`<input type="text" id="wiz-input" placeholder="${step.placeholder}" value="${d[step.key]||''}" style="width:100%;font-family:var(--sans);font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text)">`;
   }
 
+  // For backflowId step, add a scan button under the input
+  const scanBtn = step.key==='backflowId' ? `
+    <button type="button" onclick="openQRScannerWiz()" style="margin-top:10px;font-family:var(--sans);width:100%;padding:11px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="10" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="2.8" y="2.8" width="1.4" height="1.4" fill="currentColor"/><rect x="11.8" y="2.8" width="1.4" height="1.4" fill="currentColor"/><rect x="2.8" y="11.8" width="1.4" height="1.4" fill="currentColor"/><path d="M10 10h1.5v1.5H10zM12.5 10H14v1.5h-1.5zM10 12.5h1.5V14H10zM12.5 12.5H14V14h-1.5z" fill="currentColor"/></svg>
+      Scan QR Code with Camera
+    </button>` : '';
+
   document.getElementById('wiz-body').innerHTML=`
     <p style="font-size:13px;color:var(--text2);margin-bottom:14px">${step.hint}</p>
-    ${inputHtml}`;
+    ${inputHtml}${scanBtn}`;
   setTimeout(()=>{const el=document.getElementById('wiz-input');if(el)el.focus();},100);
 }
 
@@ -1259,6 +1274,177 @@ function generateQR(url, deviceName){
   };
   img.src=apiUrl;
 }
+</script>
+<!-- QR Scanner Modal -->
+<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--surface);border-radius:16px;padding:20px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-weight:600;font-size:15px">Scan Backflow ID QR Code</div>
+      <button onclick="closeQRScanner()" style="width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:15px;color:var(--text2);display:flex;align-items:center;justify-content:center">&#x2715;</button>
+    </div>
+    <!-- Camera viewfinder -->
+    <div style="position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:1">
+      <video id="qr-video" style="width:100%;height:100%;object-fit:cover" playsinline autoplay muted></video>
+      <!-- Scanning overlay -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="width:65%;aspect-ratio:1;border:2px solid rgba(255,255,255,.8);border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.35)">
+          <!-- Corner markers -->
+          <div style="position:absolute;top:0;left:0;width:20px;height:20px;border-top:3px solid var(--accent-light);border-left:3px solid var(--accent-light);border-radius:4px 0 0 0"></div>
+          <div style="position:absolute;top:0;right:0;width:20px;height:20px;border-top:3px solid var(--accent-light);border-right:3px solid var(--accent-light);border-radius:0 4px 0 0"></div>
+          <div style="position:absolute;bottom:0;left:0;width:20px;height:20px;border-bottom:3px solid var(--accent-light);border-left:3px solid var(--accent-light);border-radius:0 0 0 4px"></div>
+          <div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:3px solid var(--accent-light);border-right:3px solid var(--accent-light);border-radius:0 0 4px 0"></div>
+        </div>
+      </div>
+      <!-- Scan line animation -->
+      <div id="qr-scanline" style="position:absolute;left:17.5%;right:17.5%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scanline 2s linear infinite;top:20%"></div>
+      <canvas id="qr-canvas" style="display:none"></canvas>
+    </div>
+    <div id="qr-status" style="text-align:center;font-size:13px;color:var(--text2);margin-top:12px;min-height:20px">Point camera at a QR code</div>
+    <!-- Manual entry fallback -->
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border2)">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Or type the Backflow ID manually:</div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="qr-manual" placeholder="e.g. BF-1234" style="flex:1;padding:8px 10px;border-radius:var(--r);border:1px solid var(--border2);font-size:13px;background:var(--surface2)">
+        <button onclick="applyManualBackflowId()" style="padding:8px 14px;border-radius:var(--r);border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:13px;font-weight:500">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes scanline{0%{top:17.5%}50%{top:72.5%}100%{top:17.5%}}
+</style>
+
+<script>
+// ── QR Scanner ────────────────────────────────────────────
+let qrStream=null;
+let qrTimer=null;
+let qrDetector=null;
+
+async function openQRScannerWiz(){
+  // Same scanner but fills wiz-input instead of e-backflowid
+  openQRScanner('wiz');
+}
+
+async function openQRScanner(target='edit'){
+  document.getElementById('qr-modal').style.display='flex';
+  document.getElementById('qr-status').textContent='Starting camera…';
+  document.getElementById('qr-manual').value='';
+  // Store target so handleQRResult knows where to fill
+  document.getElementById('qr-modal').dataset.target=target;
+
+  // Try BarcodeDetector API first (supported on Android Chrome, iOS Safari 17+)
+  if(window.BarcodeDetector){
+    try{
+      const formats=await BarcodeDetector.getSupportedFormats();
+      if(formats.includes('qr_code')){
+        qrDetector=new BarcodeDetector({formats:['qr_code']});
+      }
+    }catch(e){}
+  }
+
+  try{
+    qrStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'environment',width:{ideal:1280},height:{ideal:1280}}
+    });
+    const video=document.getElementById('qr-video');
+    video.srcObject=qrStream;
+    await video.play();
+    document.getElementById('qr-status').textContent='Point camera at a QR code';
+    startScanning();
+  }catch(e){
+    document.getElementById('qr-status').textContent='Camera unavailable — use manual entry below';
+    console.warn('Camera error:',e);
+  }
+}
+
+function startScanning(){
+  const video=document.getElementById('qr-video');
+  const canvas=document.getElementById('qr-canvas');
+  const ctx=canvas.getContext('2d');
+
+  async function tick(){
+    if(!qrStream)return;
+    if(video.readyState<2){qrTimer=setTimeout(tick,200);return;}
+
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    ctx.drawImage(video,0,0);
+
+    let result=null;
+
+    // Method 1: BarcodeDetector API (fast, native)
+    if(qrDetector){
+      try{
+        const codes=await qrDetector.detect(canvas);
+        if(codes.length)result=codes[0].rawValue;
+      }catch(e){}
+    }
+
+    if(result){
+      handleQRResult(result);
+      return;
+    }
+
+    qrTimer=setTimeout(tick,250);
+  }
+  qrTimer=setTimeout(tick,500);
+}
+
+function handleQRResult(raw){
+  // Extract just text — strip URLs if it's a maps link, otherwise use as-is
+  let value=raw.trim();
+  // If it looks like a URL, try to extract a meaningful ID from it
+  // e.g. if someone has encoded "BF-1234" directly — use it
+  // if it's a google maps URL, don't use it (wrong QR code)
+  if(value.startsWith('http')){
+    // Try to extract backflow ID pattern from URL params
+    try{
+      const url=new URL(value);
+      const id=url.searchParams.get('backflowId')||url.searchParams.get('id')||url.searchParams.get('q');
+      if(id)value=id;
+      else{
+        document.getElementById('qr-status').textContent='⚠ That looks like a Maps QR — try a device label QR';
+        qrTimer=setTimeout(()=>startScanning(),2000);
+        return;
+      }
+    }catch(e){}
+  }
+
+  // Success!
+  document.getElementById('qr-status').innerHTML='<span style="color:var(--green);font-weight:600">✓ Scanned: '+value+'</span>';
+  document.getElementById('qr-video').style.outline='3px solid var(--green)';
+
+  const target=document.getElementById('qr-modal').dataset.target||'edit';
+  setTimeout(()=>{
+    const fieldId = target==='wiz' ? 'wiz-input' : 'e-backflowid';
+    const field = document.getElementById(fieldId);
+    if(field) field.value=value;
+    closeQRScanner();
+    showToast('Backflow ID filled: '+value);
+  },800);
+}
+
+function applyManualBackflowId(){
+  const val=document.getElementById('qr-manual').value.trim();
+  if(!val){showToast('Please enter a Backflow ID.');return;}
+  const target=document.getElementById('qr-modal').dataset.target||'edit';
+  const fieldId = target==='wiz' ? 'wiz-input' : 'e-backflowid';
+  const field = document.getElementById(fieldId);
+  if(field) field.value=val;
+  closeQRScanner();
+  showToast('Backflow ID filled: '+val);
+}
+
+function closeQRScanner(){
+  if(qrTimer){clearTimeout(qrTimer);qrTimer=null;}
+  if(qrStream){qrStream.getTracks().forEach(t=>t.stop());qrStream=null;}
+  qrDetector=null;
+  const video=document.getElementById('qr-video');
+  video.srcObject=null;
+  video.style.outline='';
+  document.getElementById('qr-modal').style.display='none';
+}
+// ─────────────────────────────────────────────────────────
 </script>
 </body>
 </html>

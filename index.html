@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asset Testing Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.06);
+    --text: #1a1a18;
+    --text2: #6b6b65;
+    --text3: #9e9e97;
+    --accent: #2d5a3d;
+    --accent-light: #e8f0ea;
+    --red: #c0392b;
+    --red-bg: #fdf0ee;
+    --amber: #b45309;
+    --amber-bg: #fef6e8;
+    --green: #1a6e3c;
+    --green-bg: #eaf4ee;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Top nav */
+  nav {
+    background: var(--accent);
+    color: #fff;
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .nav-brand-icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .nav-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .nav-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.22); }
+  .nav-btn-primary {
+    background: #fff;
+    color: var(--accent);
+    border-color: transparent;
+  }
+  .nav-btn-primary:hover { background: #f0ede6; }
+
+  /* Main layout */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* Page header */
+  .page-header {
+    margin-bottom: 1.75rem;
+  }
+  .page-header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .page-header p {
+    color: var(--text2);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* Alert bar */
+  .alert {
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid transparent;
+  }
+  .alert-danger { background: var(--red-bg); color: var(--red); border-color: rgba(192,57,43,0.15); }
+  .alert-warning { background: var(--amber-bg); color: var(--amber); border-color: rgba(180,83,9,0.15); }
+  .alert-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* Metrics */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .metric {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border2);
+    padding: 18px 20px;
+  }
+  .metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+  .metric-value {
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .metric-value.danger { color: var(--red); }
+  .metric-value.warn { color: var(--amber); }
+  .metric-value.ok { color: var(--green); }
+  .metric-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+  }
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    pointer-events: none;
+  }
+  input[type=text] {
+    font-family: var(--sans);
+    width: 100%;
+    padding: 8px 10px 8px 32px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--accent); }
+  select {
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6b65' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+  }
+  select:focus { outline: none; border-color: var(--accent); }
+
+  /* Table card */
+  .table-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border2);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 1px solid var(--border2); }
+  th {
+    text-align: left;
+    padding: 11px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border2);
+    transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td {
+    padding: 13px 16px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  .asset-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 0.03em;
+  }
+  .asset-name { font-weight: 500; color: var(--text); }
+  .date-cell { color: var(--text2); font-size: 12px; }
+  .notes-cell {
+    color: var(--text2);
+    font-size: 12px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .badge-overdue { background: var(--red-bg); color: var(--red); }
+  .badge-due-soon { background: var(--amber-bg); color: var(--amber); }
+  .badge-ok { background: var(--green-bg); color: var(--green); }
+  .badge-pass { background: var(--green-bg); color: var(--green); }
+  .badge-fail { background: var(--red-bg); color: var(--red); }
+  .badge-pending { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+
+  /* Row actions */
+  .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+  tbody tr:hover .row-actions { opacity: 1; }
+  .row-btn {
+    font-family: var(--sans);
+    font-size: 11px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-weight: 500;
+  }
+  .row-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+  .row-btn.delete:hover { background: var(--red-bg); color: var(--red); border-color: rgba(192,57,43,0.2); }
+
+  /* Empty state */
+  .empty {
+    padding: 3rem;
+    text-align: center;
+    color: var(--text3);
+  }
+  .empty-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+  .empty p { font-size: 13px; }
+  .empty a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(2px);
+    padding: 1rem;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border2);
+    padding: 2rem;
+    width: 480px;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .modal-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .modal-close {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text2);
+    transition: background 0.12s;
+  }
+  .modal-close:hover { background: var(--surface2); }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .field input, .field select, .field textarea {
+    font-family: var(--sans);
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field select { cursor: pointer; }
+  .field textarea { height: 80px; resize: vertical; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border2);
+  }
+  .btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.12s;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+  .btn-primary:hover { background: #234d33; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--text);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 11px 18px;
+    border-radius: var(--radius);
+    z-index: 999;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    color: var(--text3);
+    font-size: 12px;
+    padding: 2rem;
+    border-top: 1px solid var(--border2);
+    margin-top: 3rem;
+  }
+
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    nav { padding: 0 1rem; }
+    main { padding: 1.25rem 1rem 3rem; }
+    .field-row { grid-template-columns: 1fr; }
+    th:nth-child(3), td:nth-child(3),
+    th:nth-child(7), td:nth-child(7) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-brand-icon">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.5" fill="white" opacity="0.9"/><rect x="8" y="1" width="5" height="5" rx="1.5" fill="white" opacity="0.6"/><rect x="1" y="8" width="5" height="5" rx="1.5" fill="white" opacity="0.6"/><rect x="8" y="8" width="5" height="5" rx="1.5" fill="white" opacity="0.9"/></svg>
+    </div>
+    Asset Testing Tracker
+  </div>
+  <div class="nav-actions">
+    <button class="nav-btn" onclick="exportCSV()">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="display:inline;margin-right:5px;vertical-align:-2px"><path d="M6.5 1v7M3.5 5l3 3 3-3M1 10h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Export CSV
+    </button>
+    <button class="nav-btn nav-btn-primary" onclick="openAdd()">+ Add asset</button>
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <h1>Facilities &amp; Infrastructure</h1>
+    <p>Annual testing compliance register — track due dates, results, and notes for all assets.</p>
+  </div>
+
+  <div id="alert-area"></div>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 10l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="text" id="search" placeholder="Search assets…" oninput="render()">
+    </div>
+    <select id="filter-status" onchange="render()">
+      <option value="">All statuses</option>
+      <option value="overdue">Overdue</option>
+      <option value="due-soon">Due soon</option>
+      <option value="ok">Up to date</option>
+    </select>
+    <select id="filter-result" onchange="render()">
+      <option value="">All results</option>
+      <option value="Pass">Pass</option>
+      <option value="Fail">Fail</option>
+      <option value="Pending">Pending</option>
+    </select>
+    <span id="count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Asset ID</th>
+          <th>Asset name</th>
+          <th>Last tested</th>
+          <th>Next due</th>
+          <th>Status</th>
+          <th>Result</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty" class="empty" style="display:none">
+      <div class="empty-icon">📋</div>
+      <p>No assets found. <a href="#" onclick="openAdd();return false">Add your first asset</a> to get started.</p>
+    </div>
+  </div>
+</main>
+
+<footer>Asset Testing Tracker &mdash; All data stored locally in your browser.</footer>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal" style="display:none" onclick="bgClose(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Add asset</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Asset ID</label><input id="f-id" type="text" placeholder="e.g. FAC-001"></div>
+      <div class="field"><label>Asset name</label><input id="f-name" type="text" placeholder="e.g. Fire suppression system"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Last tested</label><input id="f-last" type="date"></div>
+      <div class="field"><label>Next due</label><input id="f-next" type="date"></div>
+    </div>
+    <div class="field">
+      <label>Test result</label>
+      <select id="f-result">
+        <option>Pending</option>
+        <option>Pass</option>
+        <option>Fail</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Any relevant notes, observations, or follow-up actions…"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAsset()">Save asset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'asset_tracker_v2';
+let assets = [];
+let editIdx = null;
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { assets = JSON.parse(raw); }
+    else { assets = getSampleData(); saveData(); }
+  } catch(e) { assets = getSampleData(); }
+  render();
+}
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(assets)); } catch(e) {}
+}
+
+function getSampleData() {
+  const d = (n) => { const x = new Date(); x.setDate(x.getDate()+n); return x.toISOString().slice(0,10); };
+  return [
+    { id:'FAC-001', name:'Fire suppression system', last:d(-365), next:d(-10), result:'Pass', notes:'Annual hydro test completed. Next test scheduled.' },
+    { id:'FAC-002', name:'Emergency lighting', last:d(-300), next:d(12), result:'Pass', notes:'Battery backup tested — all units operational.' },
+    { id:'FAC-003', name:'HVAC roof unit A', last:d(-400), next:d(-45), result:'Fail', notes:'Filter replacement required before re-test.' },
+    { id:'FAC-004', name:'Electrical switchboard', last:d(-180), next:d(200), result:'Pass', notes:'Thermographic scan completed. No hotspots detected.' },
+    { id:'FAC-005', name:'Backup generator', last:d(-90), next:d(275), result:'Pass', notes:'Load test passed at 80% capacity.' },
+    { id:'FAC-006', name:'Roof drainage system', last:d(-50), next:d(315), result:'Pending', notes:'' },
+  ];
+}
+
+function getStatus(nextDate) {
+  if (!nextDate) return 'ok';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((new Date(nextDate) - today) / 86400000);
+  if (diff < 0) return 'overdue';
+  if (diff <= 30) return 'due-soon';
+  return 'ok';
+}
+
+function statusBadge(s) {
+  const map = {
+    overdue: ['badge-overdue','Overdue'],
+    'due-soon': ['badge-due-soon','Due soon'],
+    ok: ['badge-ok','Up to date']
+  };
+  const [cls, label] = map[s];
+  return `<span class="badge ${cls}"><span class="badge-dot"></span>${label}</span>`;
+}
+
+function resultBadge(r) {
+  const map = { Pass:'badge-pass', Fail:'badge-fail', Pending:'badge-pending' };
+  return `<span class="badge ${map[r]||'badge-pending'}">${r||'Pending'}</span>`;
+}
+
+function fmtDate(d) {
+  if (!d) return '<span style="color:var(--text3)">—</span>';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const fs = document.getElementById('filter-status').value;
+  const fr = document.getElementById('filter-result').value;
+
+  const filtered = assets.filter(a => {
+    if (q && !a.id.toLowerCase().includes(q) && !a.name.toLowerCase().includes(q) && !(a.notes||'').toLowerCase().includes(q)) return false;
+    if (fs && getStatus(a.next) !== fs) return false;
+    if (fr && (a.result||'Pending') !== fr) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tbody');
+  document.getElementById('empty').style.display = filtered.length ? 'none' : 'block';
+  document.getElementById('count').textContent = filtered.length !== assets.length ? `${filtered.length} of ${assets.length} assets` : `${assets.length} assets`;
+
+  tbody.innerHTML = filtered.map(a => {
+    const s = getStatus(a.next);
+    const ri = assets.indexOf(a);
+    return `<tr>
+      <td><span class="asset-id">${a.id}</span></td>
+      <td><span class="asset-name">${a.name}</span></td>
+      <td class="date-cell">${fmtDate(a.last)}</td>
+      <td class="date-cell">${fmtDate(a.next)}</td>
+      <td>${statusBadge(s)}</td>
+      <td>${resultBadge(a.result||'Pending')}</td>
+      <td class="notes-cell" title="${(a.notes||'').replace(/"/g,'&quot;')}">${a.notes||'<span style="color:var(--text3)">—</span>'}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn" onclick="openEdit(${ri})">Edit</button>
+          <button class="row-btn delete" onclick="deleteAsset(${ri})">Delete</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Metrics
+  const total = assets.length;
+  const overdue = assets.filter(a=>getStatus(a.next)==='overdue').length;
+  const dueSoon = assets.filter(a=>getStatus(a.next)==='due-soon').length;
+  const failed = assets.filter(a=>(a.result||'')===('Fail')).length;
+  const passRate = total ? Math.round((assets.filter(a=>a.result==='Pass').length/total)*100) : 0;
+
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric">
+      <div class="metric-label">Total assets</div>
+      <div class="metric-value">${total}</div>
+      <div class="metric-sub">Facilities &amp; infrastructure</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Overdue</div>
+      <div class="metric-value ${overdue>0?'danger':''}">${overdue}</div>
+      <div class="metric-sub">${overdue>0?'Requires immediate action':'All tests current'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Due within 30 days</div>
+      <div class="metric-value ${dueSoon>0?'warn':''}">${dueSoon}</div>
+      <div class="metric-sub">${dueSoon>0?'Schedule testing soon':'No upcoming deadlines'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Pass rate</div>
+      <div class="metric-value ${passRate<80?'warn':'ok'}">${passRate}%</div>
+      <div class="metric-sub">${failed} failed last test</div>
+    </div>
+  `;
+
+  // Alert
+  const ab = document.getElementById('alert-area');
+  if (overdue > 0) {
+    ab.innerHTML = `<div class="alert alert-danger"><span class="alert-dot"></span>${overdue} asset${overdue>1?'s are':' is'} overdue for annual testing — review and schedule immediately.</div>`;
+  } else if (dueSoon > 0) {
+    ab.innerHTML = `<div class="alert alert-warning"><span class="alert-dot"></span>${dueSoon} asset${dueSoon>1?'s are':' is'} due for testing within the next 30 days.</div>`;
+  } else {
+    ab.innerHTML = '';
+  }
+}
+
+function openAdd() {
+  editIdx = null;
+  document.getElementById('modal-title').textContent = 'Add asset';
+  ['f-id','f-name','f-last','f-next','f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-result').value = 'Pending';
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('f-id').focus(), 50);
+}
+
+function openEdit(i) {
+  editIdx = i;
+  const a = assets[i];
+  document.getElementById('modal-title').textContent = 'Edit asset';
+  document.getElementById('f-id').value = a.id;
+  document.getElementById('f-name').value = a.name;
+  document.getElementById('f-last').value = a.last || '';
+  document.getElementById('f-next').value = a.next || '';
+  document.getElementById('f-result').value = a.result || 'Pending';
+  document.getElementById('f-notes').value = a.notes || '';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function bgClose(e) { if (e.target === document.getElementById('modal')) closeModal(); }
+
+function saveAsset() {
+  const id = document.getElementById('f-id').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  if (!id || !name) { showToast('Asset ID and name are required.'); return; }
+  const a = {
+    id, name,
+    last: document.getElementById('f-last').value,
+    next: document.getElementById('f-next').value,
+    result: document.getElementById('f-result').value,
+    notes: document.getElementById('f-notes').value.trim()
+  };
+  if (editIdx !== null) { assets[editIdx] = a; showToast('Asset updated.'); }
+  else { assets.push(a); showToast('Asset added.'); }
+  saveData(); closeModal(); render();
+}
+
+function deleteAsset(i) {
+  if (!confirm(`Delete "${assets[i].name}"? This cannot be undone.`)) return;
+  assets.splice(i, 1);
+  saveData(); render();
+  showToast('Asset deleted.');
+}
+
+function exportCSV() {
+  const rows = [['Asset ID','Asset name','Last tested','Next due','Status','Result','Notes']];
+  assets.forEach(a => rows.push([a.id, a.name, a.last||'', a.next||'', getStatus(a.next), a.result||'Pending', a.notes||'']));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'asset_testing_register.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exported.');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+loadData();
+</script>
+</body>
+</html>

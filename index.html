@@ -104,6 +104,10 @@ tbody tr.row-complete{background:#d4f0dc;border-left:4px solid #1a6636}
 tbody tr.row-complete:hover{background:#c0e8cc}
 tbody tr.row-fail{background:#fadadd;border-left:4px solid #b83232}
 tbody tr.row-fail:hover{background:#f5c6c6}
+tbody tr.row-repaired{background:#e3f0fc;border-left:4px solid #1565c0}
+tbody tr.row-repaired:hover{background:#cce0f5}
+tbody tr.row-decommissioned{background:#f0f0f0;border-left:4px solid #888;opacity:.7}
+tbody tr.row-decommissioned:hover{background:#e8e8e8}
 td{padding:11px 14px;font-size:13px;vertical-align:middle}
 .cmplx{font-weight:600;font-size:12px;color:var(--accent);letter-spacing:.01em}
 .devname{font-weight:500}
@@ -218,6 +222,8 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   tbody tr{border:none;cursor:pointer;margin:0 0.75rem 8px;border-radius:14px;background:var(--surface);border:1px solid var(--border2);box-shadow:0 1px 4px rgba(0,0,0,.06);padding:0;overflow:hidden;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto auto;gap:0}
   tbody tr.row-complete{background:#d4f0dc;border:1px solid #a8d9b5;box-shadow:0 1px 4px rgba(26,102,54,.12)}
   tbody tr.row-fail{background:#fadadd;border:1px solid #f0b8bb;box-shadow:0 1px 4px rgba(184,50,50,.12)}
+  tbody tr.row-repaired{background:#e3f0fc;border:1px solid #a8c8ef;box-shadow:0 1px 4px rgba(21,101,192,.12)}
+  tbody tr.row-decommissioned{background:#f0f0f0;border:1px solid #ccc;opacity:.75}
   tbody tr:hover{background:var(--surface)}
   td{padding:0;border:none}
   td:nth-child(1){grid-column:1;grid-row:1/4;display:flex;align-items:center;justify-content:center;padding:12px 6px 12px 10px;width:40px}
@@ -518,6 +524,8 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <button onclick="toggleStatusPill('upcoming',this)" data-status="upcoming" style="font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Upcoming</button>
       <button onclick="toggleStatusPill('failed',this)" data-status="failed" style="font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Failed</button>
       <button onclick="toggleStatusPill('complete',this)" data-status="complete" style="font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Complete</button>
+      <button onclick="toggleStatusPill('repaired',this)" data-status="repaired" style="font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Repaired</button>
+      <button onclick="toggleStatusPill('decommissioned',this)" data-status="decommissioned" style="font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Decommissioned</button>
     </div>
     <!-- Month filter -->
     <select id="mob-f-month" onchange="document.getElementById('f-sched-month').value=this.value;populateSuburbFilter();render()" style="font-family:var(--sans);font-size:14px;padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;outline:none;width:100%;box-sizing:border-box;margin-bottom:8px">
@@ -727,7 +735,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         <div class="frow">
           <div class="field"><label>Test date</label><input type="date" id="f-date"></div>
           <div class="field"><label>Result</label>
-            <select id="f-result2"><option>Pending</option><option>Pass</option><option>Fail</option></select>
+            <select id="f-result2"><option>Pending</option><option>Pass</option><option>Fail</option><option>Repaired</option><option>Decommissioned</option></select>
           </div>
         </div>
         <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Test observations, follow-up actions…"></textarea></div>
@@ -810,7 +818,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <div class="frow">
       <div class="field"><label>Last tested</label><input type="date" id="a-date"></div>
       <div class="field"><label>Test result</label>
-        <select id="a-result"><option>Pending</option><option>Pass</option><option>Fail</option></select>
+        <select id="a-result"><option>Pending</option><option>Pass</option><option>Fail</option><option>Repaired</option><option>Decommissioned</option></select>
       </div>
     </div>
     <div class="field"><label>Notes</label><textarea id="a-notes" placeholder="Any notes&#x2026;"></textarea></div>
@@ -1403,7 +1411,7 @@ function switchClient(id){
   setActiveClientId(id);
   document.getElementById('search').value='';
   document.getElementById('f-suburb').value='';
-  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending']);
+  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
   load();
   if(window._firebaseReady) startFirebaseListener();
 }
@@ -1465,6 +1473,8 @@ function getStatus(d){
   const currentMonth=now.getMonth(); // 0-indexed
   if(d.testDate){
     const ty=parseInt(d.testDate.slice(0,4));
+    if(d.testResult==='Decommissioned') return'decommissioned';
+    if(d.testResult==='Repaired') return'repaired';
     if(ty===currentYear){
       if(d.testResult==='Fail') return'failed';
       return'complete';
@@ -1488,6 +1498,8 @@ function statusBadge(d){
     upcoming:'<span class="badge b-upcoming"><span class="bdot"></span>Upcoming</span>',
     complete:'<span class="badge b-complete"><span class="bdot"></span>Complete</span>',
     failed:'<span class="badge b-failed"><span class="bdot"></span>Failed</span>',
+    repaired:'<span class="badge" style="background:#e3f0fc;color:#1565c0;border:1px solid rgba(21,101,192,.2)"><span class="bdot" style="background:#1565c0"></span>Repaired</span>',
+    decommissioned:'<span class="badge" style="background:#f0f0f0;color:#555;border:1px solid rgba(0,0,0,.1)"><span class="bdot" style="background:#888"></span>Decommissioned</span>',
     pending:'<span class="badge b-pend"><span class="bdot"></span>Pending</span>'
   };
   return map[s]||map.pending;
@@ -1500,25 +1512,27 @@ function fmtDate(d){
 
 // ── Multi-select status filter ───────────────────────────
 // Default: show overdue + due this month
-window._activeStatuses = new Set(['overdue','due','due_next','upcoming','failed','complete','pending']);
+window._activeStatuses = new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
 
 const STATUS_COLOURS = {
-  overdue: {on:'#c0392b', label:'Overdue'},
-  due:     {on:'#e67e22', label:'Due this month'},
-  due_next:{on:'#1976d2', label:'Next month'},
-  upcoming:{on:'#64b5f6', label:'Upcoming'},
-  failed:  {on:'#b83232', label:'Failed'},
-  complete:{on:'#1a6636', label:'Complete'},
+  overdue:        {on:'#c0392b', label:'Overdue'},
+  due:            {on:'#e67e22', label:'Due this month'},
+  due_next:       {on:'#1976d2', label:'Next month'},
+  upcoming:       {on:'#64b5f6', label:'Upcoming'},
+  failed:         {on:'#b83232', label:'Failed'},
+  complete:       {on:'#1a6636', label:'Complete'},
+  repaired:       {on:'#1565c0', label:'Repaired'},
+  decommissioned: {on:'#666',    label:'Decommissioned'},
 };
 
 function setAllStatuses(){
-  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending']);
+  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
   syncStatusPillStyles();
   render();
 }
 
 function resetStatusFilter(){
-  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending']);
+  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
   syncStatusPillStyles();
   render();
 }
@@ -1741,10 +1755,13 @@ function deviceRow(d,hideSuburb){
   const status=getStatus(d);
   const isComplete=status==='complete';
   const isFail=status==='failed';
+  const isRepaired=status==='repaired';
+  const isDecommissioned=status==='decommissioned';
+  const rowClass=isFail?'row-fail':isComplete?'row-complete':isRepaired?'row-repaired':isDecommissioned?'row-decommissioned':'';
   const distLabel=d._dist!=null
     ?`<span style="font-size:10px;color:var(--accent);font-weight:600;background:var(--accent-light);padding:1px 6px;border-radius:10px;white-space:nowrap">${d._dist<1?(d._dist*1000).toFixed(0)+'m':d._dist.toFixed(1)+'km'}</span>`
     :'';
-  return`<tr class="${isFail?'row-fail':isComplete?'row-complete':''}" onclick="openDevice(${d.id})">`+
+  return`<tr class="${rowClass}" onclick="openDevice(${d.id})">`+
     `<td><a href="${url}" target="_blank" class="map-btn${hasGps?'':' no-gps'}" onclick="event.stopPropagation()">
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 0.5C3.07 0.5 1.5 2.07 1.5 4c0 2.5 3.5 6 3.5 6s3.5-3.5 3.5-6C8.5 2.07 6.93 0.5 5 0.5z" fill="currentColor" opacity=".8"/><circle cx="5" cy="4" r="1.2" fill="white"/></svg>
       ${hasGps?'GPS':'Maps'}
@@ -1787,24 +1804,37 @@ function openDevice(id){
   const isComplete=getStatus(d)==='complete';
   const canRecord=can('recordTests');
   let barHtml='';
-  if(isComplete){
+  const currentStatus=getStatus(d);
+  if(currentStatus==='complete'||currentStatus==='failed'||currentStatus==='repaired'||currentStatus==='decommissioned'){
     const[y,m,day]=d.testDate.split('-');
-    const resultColour=d.testResult==='Fail'?'var(--red)':'var(--green)';
-    const resultBg=d.testResult==='Fail'?'var(--red-bg)':'var(--green-bg)';
-    const resultBorder=d.testResult==='Fail'?'rgba(184,50,50,.2)':'rgba(26,102,54,.2)';
-    barHtml=`<button class="btn-tested already" style="background:${resultBg};color:${resultColour};border-color:${resultBorder}" onclick="${canRecord?'markUntested()':''}">
+    const colours={
+      'Pass':    {bg:'var(--green-bg)',   colour:'var(--green)',   border:'rgba(26,102,54,.2)'},
+      'Fail':    {bg:'var(--red-bg)',     colour:'var(--red)',     border:'rgba(184,50,50,.2)'},
+      'Repaired':{bg:'#e3f0fc',           colour:'#1565c0',        border:'rgba(21,101,192,.2)'},
+      'Decommissioned':{bg:'#f0f0f0',     colour:'#555',           border:'rgba(0,0,0,.15)'},
+    };
+    const c=colours[d.testResult]||colours['Pass'];
+    barHtml=`<button class="btn-tested already" style="background:${c.bg};color:${c.colour};border-color:${c.border}" onclick="${canRecord?'markUntested()':''}">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      ${d.testResult} — ${day}/${m}/${y}${canRecord?' &mdash; click to undo':''}
+      ${d.testResult} — ${day}/${m}/${y}${canRecord?' &mdash; tap to undo':''}
     </button>`;
   } else if(canRecord){
-    barHtml=`<div style="display:flex;gap:8px">
-      <button class="btn-tested" style="flex:1;background:var(--green)" onclick="markTestedToday('Pass')">
+    barHtml=`<div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:var(--green)" onclick="markTestedToday('Pass')">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8l5 5 7-8" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Pass
       </button>
-      <button class="btn-tested" style="flex:1;background:var(--red)" onclick="markTestedToday('Fail')">
+      <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:var(--red)" onclick="markTestedToday('Fail')">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Fail
+      </button>
+      <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:#1976d2" onclick="markTestedToday('Repaired')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13 3l-2-2-7 7-1 3 3-1 7-7zM10 1l2 2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 14h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Repaired
+      </button>
+      <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:#666;border-radius:var(--r)" onclick="markDecommissioned()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.8"/><path d="M5 8h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        Decommissioned
       </button>
     </div>`;
   }
@@ -1875,6 +1905,14 @@ function openDevice(id){
   }
 }
 
+function markDecommissioned(){
+  if(!confirm('Mark this device as decommissioned? This will record it as no longer in use.')) return;
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('f-date').value=today;
+  document.getElementById('f-result2').value='Decommissioned';
+  saveTest();
+}
+
 function markTestedToday(result){
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('f-date').value=today;
@@ -1885,7 +1923,6 @@ function markTestedToday(result){
     saveTest();
   }
 }
-
 function showFailNotesPopup(){
   // Remove any existing popup
   const existing=document.getElementById('fail-notes-popup');

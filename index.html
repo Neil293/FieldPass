@@ -212,7 +212,6 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   .toolbar select{width:100%;font-size:16px;padding:11px 28px 11px 12px;border-radius:12px}
   .toolbar .tcount{margin-left:0;font-size:12px}
   #mobile-filter-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-  #grp-wrap{display:flex;align-items:center;gap:8px;font-size:14px}
 
   /* ═══════════════════════════════════════
      DEVICE CARDS (table → cards)
@@ -560,11 +559,6 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <option value="failed">Failed</option>
       <option value="complete">Complete</option>
     </select>
-    </div>
-    <div id="grp-wrap">
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap">
-      <input type="checkbox" id="grp-toggle" onchange="render()" checked style="width:14px;height:14px;accent-color:var(--accent)"> Group by suburb
-    </label>
     </div>
     <button id="sort-nearest-btn" onclick="sortByNearest()" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all .15s">
       <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 1v1.5M6.5 10V12M1 6.5h1.5M10 6.5H12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -1020,9 +1014,6 @@ function sortByNearest(){
       btn.style.background='var(--accent)';
       btn.style.color='#fff';
       btn.style.borderColor='var(--accent)';
-      // Uncheck group by suburb — grouping conflicts with distance sort
-      const grp=document.getElementById('grp-toggle');
-      if(grp&&grp.checked){grp.checked=false;}
       render();
       showToast('Sorted by nearest device');
     },
@@ -1308,7 +1299,8 @@ function render(){
   const q=document.getElementById('search').value.toLowerCase();
   const fsm=document.getElementById('f-sched-month').value;
   const fst=document.getElementById('f-status').value;
-  const grp=document.getElementById('grp-toggle').checked;
+  // Always group by suburb unless GPS sort is active
+  const grp=!sortGpsOrigin;
 
   // Update suburb dropdown to only show suburbs for selected month
   const suburbSel=document.getElementById('f-suburb');

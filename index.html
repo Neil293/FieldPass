@@ -1089,16 +1089,24 @@ function haversineKm(lat1,lng1,lat2,lng2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
+let _savedStatusesBeforeSort=null; // saved state before GPS sort
+
 function sortByNearest(){
   const btn=document.getElementById('sort-nearest-btn');
   const label=document.getElementById('sort-nearest-label');
-  // If already sorted by nearest, cancel sort
+  // If already sorted by nearest, cancel sort — restore previous status filter
   if(sortGpsOrigin){
     sortGpsOrigin=null;
     label.textContent='Sort by nearest';
     btn.style.background='';
     btn.style.color='var(--text2)';
     btn.style.borderColor='var(--border)';
+    // Restore saved statuses (re-enable complete)
+    if(_savedStatusesBeforeSort){
+      window._activeStatuses=_savedStatusesBeforeSort;
+      _savedStatusesBeforeSort=null;
+    }
+    syncStatusPillStyles();
     render();
     return;
   }
@@ -1114,6 +1122,10 @@ function sortByNearest(){
       btn.style.background='var(--accent)';
       btn.style.color='#fff';
       btn.style.borderColor='var(--accent)';
+      // Save current statuses then remove 'complete' so completed devices don't clutter the list
+      _savedStatusesBeforeSort=new Set(window._activeStatuses);
+      window._activeStatuses=new Set([...window._activeStatuses].filter(s=>s!=='complete'));
+      syncStatusPillStyles();
       render();
       showToast('Sorted by nearest device');
     },

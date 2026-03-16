@@ -206,12 +206,12 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   /* ═══════════════════════════════════════
      TOOLBAR / FILTERS
   ═══════════════════════════════════════ */
-  .toolbar{flex-direction:column;align-items:stretch;gap:7px;padding:0 0.75rem;margin-bottom:8px}
-  .sw{min-width:unset;max-width:unset;width:100%}
-  .sw input[type=text]{width:100%;font-size:16px;padding:11px 11px 11px 34px;border-radius:12px}
-  .toolbar select{width:100%;font-size:16px;padding:11px 28px 11px 12px;border-radius:12px}
+  /* ── Hide search bar on mobile - moved to hamburger ── */
+  .sw{display:none}
   .toolbar .tcount{margin-left:0;font-size:12px}
-  #mobile-filter-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  #mobile-filter-row{display:none}
+  .toolbar{gap:5px;padding:0 0.75rem;margin-bottom:8px;flex-direction:row;flex-wrap:nowrap}
+  #sort-nearest-btn{font-size:12px;padding:7px 10px}
 
   /* ═══════════════════════════════════════
      DEVICE CARDS (table → cards)
@@ -496,8 +496,42 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 </nav>
 
 <!-- Mobile dropdown menu -->
-<div id="mobile-menu" style="display:none;position:fixed;top:52px;left:0;right:0;background:var(--accent);z-index:49;border-bottom:1px solid rgba(255,255,255,.15);box-shadow:0 8px 24px rgba(0,0,0,.3)">
+<div id="mobile-menu" style="display:none;position:fixed;top:52px;left:0;right:0;background:var(--accent);z-index:49;border-bottom:1px solid rgba(255,255,255,.15);box-shadow:0 8px 24px rgba(0,0,0,.3);max-height:calc(100dvh - 52px);overflow-y:auto">
   <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.1);font-size:12px;opacity:.7" id="mob-menu-user"></div>
+
+  <!-- Search & filters -->
+  <div style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;gap:8px">
+    <div style="position:relative;display:flex;align-items:center">
+      <svg style="position:absolute;left:10px;opacity:.5;pointer-events:none" width="14" height="14" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="white" stroke-width="1.4"/><path d="M9 9l2.5 2.5" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="text" id="mob-search" placeholder="Search devices, serial, location…" oninput="document.getElementById('search').value=this.value;render()" style="font-family:var(--sans);width:100%;padding:10px 10px 10px 32px;font-size:16px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;outline:none;box-sizing:border-box">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <select id="mob-f-suburb" onchange="document.getElementById('f-suburb').value=this.value;render()" style="font-family:var(--sans);font-size:14px;padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;outline:none;width:100%">
+        <option value="">All suburbs</option>
+      </select>
+      <select id="mob-f-status" onchange="document.getElementById('f-status').value=this.value;render()" style="font-family:var(--sans);font-size:14px;padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;outline:none;width:100%">
+        <option value="">All statuses</option>
+        <option value="overdue">Overdue</option>
+        <option value="due">Due this month</option>
+        <option value="due_next">Due next month</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="failed">Failed</option>
+        <option value="complete">Complete</option>
+      </select>
+    </div>
+    <select id="mob-f-month" onchange="document.getElementById('f-sched-month').value=this.value;populateSuburbFilter();render()" style="font-family:var(--sans);font-size:14px;padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;outline:none;width:100%">
+      <option value="">All scheduled months</option>
+      <option>January</option><option>February</option><option>March</option>
+      <option>April</option><option>May</option><option>June</option>
+      <option>July</option><option>August</option><option>September</option>
+      <option>October</option><option>November</option><option>December</option>
+    </select>
+    <button onclick="toggleMobileMenu();sortByNearest()" style="font-family:var(--sans);width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="white" stroke-width="1.4"/><path d="M6.5 1v1.5M6.5 10V12M1 6.5h1.5M10 6.5H12" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span id="mob-sort-label">Sort by nearest</span>
+    </button>
+  </div>
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.1)">
     <button id="mob-menu-add" onclick="openAdd();toggleMobileMenu()" style="font-family:var(--sans);background:#1a6636;border:none;color:#fff;padding:14px 12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2v11M2 7.5h11" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
@@ -663,10 +697,16 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
               <div class="field" style="margin-bottom:0"><label>Latitude</label><input type="text" id="e-lat" placeholder="e.g. -34.7801"></div>
               <div class="field" style="margin-bottom:0"><label>Longitude</label><input type="text" id="e-lng" placeholder="e.g. 150.6941"></div>
             </div>
-            <button type="button" id="btn-use-location" onclick="useMyLocation()" style="font-family:var(--sans);width:100%;padding:9px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s">
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 1v1.5M6.5 10.5V12M1 6.5h1.5M10.5 6.5H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-              <span id="btn-loc-label">Use my current location</span>
-            </button>
+            <div style="display:flex;gap:8px">
+              <button type="button" id="btn-use-location" onclick="useMyLocation()" style="font-family:var(--sans);flex:1;padding:9px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 1v1.5M6.5 10.5V12M1 6.5h1.5M10.5 6.5H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span id="btn-loc-label">My location</span>
+              </button>
+              <button type="button" onclick="openMapPicker('edit')" style="font-family:var(--sans);flex:1;padding:9px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 13C6.5 13 1.5 8.5 1.5 5a5 5 0 0110 0C11.5 8.5 6.5 13 6.5 13z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                Pick on map
+              </button>
+            </div>
           </div>
         </div>
       </details>
@@ -738,13 +778,19 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       </div>
     </div>
     <div class="field"><label>Location description</label><input type="text" id="a-loc" placeholder="Street address or site name"></div>
-    <!-- GPS section with Use My Location button -->
+    <!-- GPS section with Use My Location and Pick on Map buttons -->
     <div class="field">
       <label>GPS coordinates</label>
-      <button type="button" id="a-gps-btn" onclick="useMyLocationAdd()" style="font-family:var(--sans);width:100%;padding:11px;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .15s">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5v2M8 12.5V14.5M1.5 8h2M12.5 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2" opacity=".4"/></svg>
-        <span id="a-gps-label">Use my current location</span>
-      </button>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button type="button" id="a-gps-btn" onclick="useMyLocationAdd()" style="font-family:var(--sans);flex:1;padding:11px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 1.5v2M7 10.5V13M1.5 7h2M10.5 7H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span id="a-gps-label">My location</span>
+        </button>
+        <button type="button" onclick="openMapPicker('add')" style="font-family:var(--sans);flex:1;padding:11px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M7 13C7 13 2 9 2 5.5a5 5 0 0110 0C12 9 7 13 7 13z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+          Pick on map
+        </button>
+      </div>
       <div class="frow" style="margin-bottom:0">
         <div class="field" style="margin-bottom:0"><label>Latitude</label><input type="text" id="a-lat" placeholder="e.g. -34.780"></div>
         <div class="field" style="margin-bottom:0"><label>Longitude</label><input type="text" id="a-lng" placeholder="e.g. 150.694"></div>
@@ -928,6 +974,32 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <button class="btn" onclick="document.getElementById('add-user-modal').style.display='none'">Cancel</button>
       <button class="btn btn-p" onclick="addUser()">Add user</button>
     </div>
+  </div>
+</div>
+
+<!-- Map Picker Modal -->
+<div id="map-picker-modal" style="display:none;position:fixed;inset:0;z-index:800;flex-direction:column;background:#fff">
+  <!-- Header -->
+  <div style="background:var(--accent);color:#fff;padding:0 1rem;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px;z-index:10">
+    <div style="font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="white" stroke-width="1.4"/><path d="M8 14C8 14 2 9.5 2 6a6 6 0 0112 0C14 9.5 8 14 8 14z" stroke="white" stroke-width="1.4" fill="none"/></svg>
+      Tap to place pin
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="map-picker-locate" onclick="mapPickerLocateMe()" style="font-family:var(--sans);font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;cursor:pointer;white-space:nowrap">
+        📍 My location
+      </button>
+      <button onclick="closeMapPicker()" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center">&#x2715;</button>
+    </div>
+  </div>
+  <!-- Instruction bar -->
+  <div id="map-picker-bar" style="flex-shrink:0;background:var(--accent-light);border-bottom:1px solid rgba(26,77,110,.15);padding:8px 14px;font-size:13px;color:var(--accent);display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <span id="map-picker-coords">Tap anywhere on the map to drop a pin</span>
+    <button id="map-picker-confirm" onclick="confirmMapPicker()" style="display:none;font-family:var(--sans);padding:7px 16px;border-radius:20px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Use this location</button>
+  </div>
+  <!-- Map -->
+  <div id="map-picker-container" style="flex:1;position:relative;min-height:0">
+    <div id="map-picker-map" style="width:100%;height:100%"></div>
   </div>
 </div>
 
@@ -1233,14 +1305,16 @@ function renderClientSwitcher(){
 
 function populateSuburbFilter(){
   const sel=document.getElementById('f-suburb');
-  const prev=sel.value; // preserve current selection if still valid
+  const prev=sel.value;
   const month=document.getElementById('f-sched-month').value;
-  // Only show suburbs that have devices matching the current month filter
   const source = month ? devices.filter(d=>d.scheduledMonth===month) : devices;
   const suburbs=[...new Set(source.map(d=>d.suburb))].sort();
-  sel.innerHTML='<option value="">All suburbs</option>'+suburbs.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
-  // If previous selection is no longer valid, clear it
+  const opts='<option value="">All suburbs</option>'+suburbs.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
+  sel.innerHTML=opts;
   if(prev && !suburbs.includes(prev)) sel.value='';
+  // Also sync mobile suburb dropdown
+  const mobSel=document.getElementById('mob-f-suburb');
+  if(mobSel){mobSel.innerHTML=opts;mobSel.value=sel.value;}
 }
 
 function populateYearFilter(){
@@ -2345,10 +2419,24 @@ function toggleMobileMenu(){
   if(!menu) return;
   const isOpen=menu.style.display!=='none';
   menu.style.display=isOpen?'none':'block';
-  // Update user info in menu
-  if(!isOpen&&currentUser){
-    const u=document.getElementById('mob-menu-user');
-    if(u) u.textContent=currentUser.name+' — '+currentUser.username;
+  if(!isOpen){
+    // Sync user info
+    if(currentUser){
+      const u=document.getElementById('mob-menu-user');
+      if(u) u.textContent=currentUser.name+' — '+currentUser.username;
+    }
+    // Sync filter values from hidden inputs to mobile dropdowns
+    const ms=document.getElementById('mob-search');
+    if(ms) ms.value=document.getElementById('search').value;
+    const mfs=document.getElementById('mob-f-suburb');
+    if(mfs) mfs.value=document.getElementById('f-suburb').value;
+    const mfst=document.getElementById('mob-f-status');
+    if(mfst) mfst.value=document.getElementById('f-status').value;
+    const mfm=document.getElementById('mob-f-month');
+    if(mfm) mfm.value=document.getElementById('f-sched-month').value;
+    // Sync sort label
+    const sl=document.getElementById('mob-sort-label');
+    if(sl) sl.textContent=sortGpsOrigin?'📍 Nearest first — tap to cancel':'Sort by nearest';
   }
 }
 
@@ -2958,6 +3046,115 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeA
 
 // ── Map View ─────────────────────────────────────────────
 let leafletMap=null;
+let mapPickerMap=null;
+let mapPickerMarker=null;
+let mapPickerTarget=null; // 'edit' or 'add'
+
+function openMapPicker(target){
+  mapPickerTarget=target;
+  document.getElementById('map-picker-modal').style.display='flex';
+  document.getElementById('map-picker-coords').textContent='Tap anywhere on the map to drop a pin';
+  document.getElementById('map-picker-confirm').style.display='none';
+  // Init map after display
+  setTimeout(()=>{
+    if(!mapPickerMap){
+      // Centre on existing coords if available, else default
+      let startLat=-35.0, startLng=150.5, zoom=11;
+      if(target==='edit'){
+        const lat=parseFloat(document.getElementById('e-lat').value);
+        const lng=parseFloat(document.getElementById('e-lng').value);
+        if(!isNaN(lat)&&!isNaN(lng)){startLat=lat;startLng=lng;zoom=16;}
+      } else {
+        const lat=parseFloat(document.getElementById('a-lat').value);
+        const lng=parseFloat(document.getElementById('a-lng').value);
+        if(!isNaN(lat)&&!isNaN(lng)){startLat=lat;startLng=lng;zoom=16;}
+        else if(devices.length){
+          const withGps=devices.filter(d=>d.lat&&d.lng);
+          if(withGps.length){
+            startLat=withGps.reduce((s,d)=>s+d.lat,0)/withGps.length;
+            startLng=withGps.reduce((s,d)=>s+d.lng,0)/withGps.length;
+          }
+        }
+      }
+      mapPickerMap=L.map('map-picker-map',{zoomControl:true}).setView([startLat,startLng],zoom);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'© OpenStreetMap',maxZoom:19
+      }).addTo(mapPickerMap);
+      mapPickerMap.on('click',onMapPickerClick);
+    } else {
+      mapPickerMap.invalidateSize();
+      // If editing device with existing coords, show existing pin
+      if(target==='edit'){
+        const lat=parseFloat(document.getElementById('e-lat').value);
+        const lng=parseFloat(document.getElementById('e-lng').value);
+        if(!isNaN(lat)&&!isNaN(lng)) setMapPickerPin(lat,lng);
+      }
+    }
+    mapPickerMap.invalidateSize();
+  },50);
+}
+
+function onMapPickerClick(e){
+  setMapPickerPin(e.latlng.lat,e.latlng.lng);
+}
+
+function setMapPickerPin(lat,lng){
+  if(mapPickerMarker) mapPickerMap.removeLayer(mapPickerMarker);
+  mapPickerMarker=L.marker([lat,lng],{
+    icon:L.divIcon({
+      html:`<div style="width:28px;height:28px;background:var(--accent);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>`,
+      iconSize:[28,28],iconAnchor:[14,28],className:''
+    })
+  }).addTo(mapPickerMap);
+  mapPickerMap.panTo([lat,lng]);
+  const latStr=lat.toFixed(6), lngStr=lng.toFixed(6);
+  document.getElementById('map-picker-coords').textContent=`📍 ${latStr}, ${lngStr}`;
+  document.getElementById('map-picker-confirm').style.display='block';
+  document.getElementById('map-picker-confirm').dataset.lat=latStr;
+  document.getElementById('map-picker-confirm').dataset.lng=lngStr;
+}
+
+function confirmMapPicker(){
+  const lat=document.getElementById('map-picker-confirm').dataset.lat;
+  const lng=document.getElementById('map-picker-confirm').dataset.lng;
+  if(mapPickerTarget==='edit'){
+    document.getElementById('e-lat').value=lat;
+    document.getElementById('e-lng').value=lng;
+    // Auto-fill location field if empty
+    const locField=document.getElementById('e-loc');
+    if(!locField.value) locField.value=`${lat}, ${lng}`;
+  } else {
+    document.getElementById('a-lat').value=lat;
+    document.getElementById('a-lng').value=lng;
+    const locField=document.getElementById('a-loc');
+    if(!locField.value) locField.value=`${lat}, ${lng}`;
+    // Update GPS button to show confirmed
+    const btn=document.getElementById('a-gps-btn');
+    const lbl=document.getElementById('a-gps-label');
+    if(btn){btn.style.background='var(--green-bg)';btn.style.color='var(--green)';}
+    if(lbl) lbl.textContent='✓ Location set';
+  }
+  closeMapPicker();
+  showToast('✓ Location pinned');
+}
+
+function closeMapPicker(){
+  document.getElementById('map-picker-modal').style.display='none';
+}
+
+function mapPickerLocateMe(){
+  if(!navigator.geolocation){showToast('GPS not supported.');return;}
+  showToast('Getting location…');
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const{latitude:lat,longitude:lng}=pos.coords;
+      if(mapPickerMap) mapPickerMap.setView([lat,lng],17);
+      setMapPickerPin(lat,lng);
+    },
+    ()=>showToast('Could not get location.'),
+    {enableHighAccuracy:true,timeout:10000}
+  );
+}
 let mapMarkers=[];
 let mapFilter='all';
 let userLocationMarker=null;

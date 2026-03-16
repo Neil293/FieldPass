@@ -559,10 +559,6 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   </div>
 </div>
 <main>
-  <div class="page-hdr">
-    <h1>Compliance Devices</h1>
-    <p id="page-subtitle">ComplyTrack</p>
-  </div>
   <div id="alert-area"></div>
   <div class="metrics" id="metrics"></div>
   <!-- Mobile month quick-select pills + count -->
@@ -1604,8 +1600,7 @@ function render(){
   }
 
   const ab=document.getElementById('alert-area');
-  if(overdue>0)ab.innerHTML=`<div class="alert alert-warn"><span class="adot"></span>${overdue} device${overdue>1?'s are':' is'} overdue — scheduled month has passed without a recorded test.</div>`;
-  else if(due>0)ab.innerHTML=`<div class="alert alert-info"><span class="adot"></span>${due} device${due>1?'s are':' is'} due for testing this month.</div>`;
+  ab.innerHTML='';
   else ab.innerHTML='';
 }
 

@@ -582,69 +582,67 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 </main>
 <footer>ComplyTrack &mdash; Data stored locally in your browser.</footer>
 </div><!-- end #app -->
-<div class="mbg" id="modal" style="display:none" onclick="bgClose(event)">
-  <div class="modal">
-    <div class="mhdr">
+<div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);z-index:500;align-items:flex-end;justify-content:center" onclick="bgClose(event)">
+  <div id="modal-sheet" style="background:var(--surface);width:100%;max-height:92vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.3)">
+    <!-- Drag handle -->
+    <div style="flex-shrink:0;display:flex;justify-content:center;padding:10px 0 0">
+      <div style="width:40px;height:4px;background:rgba(0,0,0,.15);border-radius:2px"></div>
+    </div>
+    <!-- Header -->
+    <div style="flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between;padding:0.875rem 1.25rem 0.75rem;border-bottom:1px solid var(--border2);gap:12px">
       <div>
-        <div class="mtitle" id="m-title">Device detail</div>
-        <div class="msub-info" id="m-sub"></div>
+        <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em" id="m-title">Device detail</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px" id="m-sub"></div>
       </div>
-      <button class="mclose" onclick="closeModal()">&#x2715;</button>
+      <button onclick="closeModal()" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:15px;color:var(--text2);flex-shrink:0">&#x2715;</button>
     </div>
-    <div class="modal-body">
-
-    <!-- Quick tested today button -->
-    <div id="m-tested-bar" style="margin-bottom:1.25rem"></div>
-
-    <!-- Location block -->
-    <div class="loc-block" id="m-loc-block">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;margin-top:1px"><path d="M7 1C4.79 1 3 2.79 3 5c0 3.25 4 8 4 8s4-4.75 4-8c0-2.21-1.79-4-4-4z" fill="var(--accent)" opacity=".7"/><circle cx="7" cy="5" r="1.5" fill="white"/></svg>
-      <span class="loc-text" id="m-loc-text"></span>
-      <a id="m-map-link" href="#" target="_blank" class="map-btn" style="flex-shrink:0">
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1C3.57 1 2 2.57 2 4.5c0 2.7 3.5 6.5 3.5 6.5S9 7.2 9 4.5C9 2.57 7.43 1 5.5 1z" fill="var(--accent)"/><circle cx="5.5" cy="4.5" r="1.2" fill="white"/></svg>
-        Open in Maps
-      </a>
-    </div>
-
-    <!-- QR code -->
-    <div id="m-qr-block" style="display:none;margin-bottom:1.25rem;padding:14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);align-items:center;gap:16px">
-      <div id="m-qr-canvas" style="flex-shrink:0;background:#fff;padding:8px;border-radius:8px;border:1px solid var(--border2)"></div>
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Scan for directions</div>
-        <div style="font-size:12px;color:var(--text3);line-height:1.5" id="m-qr-label">Opens Google Maps to this device location</div>
-        <a id="m-qr-download" href="#" download="device-location-qr.png" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--accent);text-decoration:none;margin-top:8px">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v6M3 5l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Download QR
+    <!-- Scrollable body -->
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1.25rem;padding-bottom:max(1rem,env(safe-area-inset-bottom))">
+      <div id="m-tested-bar" style="margin-bottom:1rem"></div>
+      <div id="m-loc-block" style="margin-bottom:1rem;padding:10px 12px;background:var(--accent-light);border-radius:var(--r);border:1px solid rgba(26,77,110,.12);display:flex;align-items:flex-start;gap:10px">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;margin-top:1px"><path d="M7 1C4.79 1 3 2.79 3 5c0 3.25 4 8 4 8s4-4.75 4-8c0-2.21-1.79-4-4-4z" fill="var(--accent)" opacity=".7"/><circle cx="7" cy="5" r="1.5" fill="white"/></svg>
+        <span style="font-size:12px;color:var(--accent);flex:1;line-height:1.4" id="m-loc-text"></span>
+        <a id="m-map-link" href="#" target="_blank" style="flex-shrink:0;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--accent);text-decoration:none;padding:4px 8px;border:1px solid rgba(26,77,110,.2);border-radius:6px;white-space:nowrap">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1C3.57 1 2 2.57 2 4.5c0 2.7 3.5 6.5 3.5 6.5S9 7.2 9 4.5C9 2.57 7.43 1 5.5 1z" fill="var(--accent)"/><circle cx="5.5" cy="4.5" r="1.2" fill="white"/></svg>
+          Maps
         </a>
       </div>
-    </div>
-
-    <!-- Editable device fields -->
-    <details id="m-details" style="margin-bottom:1rem">
-      <summary style="font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;letter-spacing:.03em;text-transform:uppercase;padding:8px 0;user-select:none">Device details &#9662;</summary>
-      <div style="padding-top:10px">
-        <div class="info-grid" id="m-info"></div>
-        <div class="frow" style="margin-top:10px">
-          <div class="field"><label>Suburb</label><input type="text" id="e-suburb"></div>
-          <div class="field"><label>Make</label><input type="text" id="e-make"></div>
+      <div id="m-qr-block" style="display:none;margin-bottom:1rem;padding:14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);align-items:center;gap:16px">
+        <div id="m-qr-canvas" style="flex-shrink:0;background:#fff;padding:8px;border-radius:8px;border:1px solid var(--border2)"></div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Scan for directions</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.5" id="m-qr-label">Opens Google Maps to this device location</div>
+          <a id="m-qr-download" href="#" download="device-location-qr.png" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--accent);text-decoration:none;margin-top:8px">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v6M3 5l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download QR
+          </a>
         </div>
-        <div class="frow">
-          <div class="field"><label>Model</label><input type="text" id="e-model"></div>
-          <div class="field"><label>Size (mm)</label><input type="text" id="e-size"></div>
-        </div>
-        <div class="frow">
-          <div class="field"><label>Serial number</label><input type="text" id="e-serial"></div>
-          <div class="field"><label>Backflow ID</label>
-            <div style="display:flex;gap:6px;align-items:center">
-              <input type="text" id="e-backflowid" placeholder="e.g. BF-1234" style="flex:1">
-              <button type="button" onclick="openQRScanner()" title="Scan QR code" style="flex-shrink:0;height:36px;padding:0 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--accent);color:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;white-space:nowrap">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="9" y="1" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="1" y="9" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="2.5" y="2.5" width="1" height="1" fill="white"/><rect x="10.5" y="2.5" width="1" height="1" fill="white"/><rect x="2.5" y="10.5" width="1" height="1" fill="white"/><path d="M9 9h1v1H9zM11 9h1v1h-1zM9 11h1v1H9zM11 11h1v1h-1z" fill="white"/></svg>
-                Scan
-              </button>
+      </div>
+      <details id="m-details" style="margin-bottom:1rem">
+        <summary style="font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;letter-spacing:.03em;text-transform:uppercase;padding:8px 0;user-select:none">Device details &#9662;</summary>
+        <div style="padding-top:10px">
+          <div class="info-grid" id="m-info"></div>
+          <div class="frow" style="margin-top:10px">
+            <div class="field"><label>Suburb</label><input type="text" id="e-suburb"></div>
+            <div class="field"><label>Make</label><input type="text" id="e-make"></div>
+          </div>
+          <div class="frow">
+            <div class="field"><label>Model</label><input type="text" id="e-model"></div>
+            <div class="field"><label>Size (mm)</label><input type="text" id="e-size"></div>
+          </div>
+          <div class="frow">
+            <div class="field"><label>Serial number</label><input type="text" id="e-serial"></div>
+            <div class="field"><label>Backflow ID</label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="text" id="e-backflowid" placeholder="e.g. BF-1234" style="flex:1">
+                <button type="button" onclick="openQRScanner()" style="flex-shrink:0;height:36px;padding:0 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--accent);color:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;white-space:nowrap">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="9" y="1" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="1" y="9" width="4" height="4" rx=".5" stroke="white" stroke-width="1.3"/><rect x="2.5" y="2.5" width="1" height="1" fill="white"/><rect x="10.5" y="2.5" width="1" height="1" fill="white"/><rect x="2.5" y="10.5" width="1" height="1" fill="white"/><path d="M9 9h1v1H9zM11 9h1v1h-1zM9 11h1v1H9zM11 11h1v1h-1z" fill="white"/></svg>
+                  Scan
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="field"><label>Scheduled month</label>
+          <div class="field"><label>Scheduled month</label>
             <select id="e-sched">
               <option value="">— select —</option>
               <option>January</option><option>February</option><option>March</option>
@@ -653,39 +651,34 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
               <option>October</option><option>November</option><option>December</option>
             </select>
           </div>
-        </div>
-        <div class="field"><label>Location</label><input type="text" id="e-loc"></div>
-        <div style="margin-top:2px">
-          <div style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">GPS coordinates</div>
-          <div class="frow" style="margin-bottom:6px">
-            <div class="field" style="margin-bottom:0"><label>Latitude</label><input type="text" id="e-lat" placeholder="e.g. -34.7801"></div>
-            <div class="field" style="margin-bottom:0"><label>Longitude</label><input type="text" id="e-lng" placeholder="e.g. 150.6941"></div>
+          <div class="field"><label>Location</label><input type="text" id="e-loc"></div>
+          <div style="margin-top:2px">
+            <div style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">GPS coordinates</div>
+            <div class="frow" style="margin-bottom:6px">
+              <div class="field" style="margin-bottom:0"><label>Latitude</label><input type="text" id="e-lat" placeholder="e.g. -34.7801"></div>
+              <div class="field" style="margin-bottom:0"><label>Longitude</label><input type="text" id="e-lng" placeholder="e.g. 150.6941"></div>
+            </div>
+            <button type="button" id="btn-use-location" onclick="useMyLocation()" style="font-family:var(--sans);width:100%;padding:9px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 1v1.5M6.5 10.5V12M1 6.5h1.5M10.5 6.5H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <span id="btn-loc-label">Use my current location</span>
+            </button>
           </div>
-          <button type="button" id="btn-use-location" onclick="useMyLocation()" style="font-family:var(--sans);width:100%;padding:9px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid rgba(26,77,110,.3);background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 1v1.5M6.5 10.5V12M1 6.5h1.5M10.5 6.5H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <span id="btn-loc-label">Use my current location</span>
-          </button>
         </div>
-      </div>
-    </details>
-
-    <!-- Test history (admin only) -->
-    <div id="m-test-history" style="display:none;margin-bottom:1.25rem;padding:12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2)"></div>
-
-    <!-- Test result section -->
-    <div style="border-top:1px solid var(--border2);padding-top:1rem">
-      <div style="font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.03em;text-transform:uppercase;margin-bottom:10px">Test record</div>
-      <div class="frow">
-        <div class="field"><label>Test date</label><input type="date" id="f-date"></div>
-        <div class="field"><label>Result</label>
-          <select id="f-result2"><option>Pending</option><option>Pass</option><option>Fail</option></select>
+      </details>
+      <div id="m-test-history" style="display:none;margin-bottom:1rem;padding:12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2)"></div>
+      <div style="border-top:1px solid var(--border2);padding-top:1rem">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.03em;text-transform:uppercase;margin-bottom:10px">Test record</div>
+        <div class="frow">
+          <div class="field"><label>Test date</label><input type="date" id="f-date"></div>
+          <div class="field"><label>Result</label>
+            <select id="f-result2"><option>Pending</option><option>Pass</option><option>Fail</option></select>
+          </div>
         </div>
+        <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Test observations, follow-up actions…"></textarea></div>
       </div>
-      <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Test observations, follow-up actions&#x2026;"></textarea></div>
     </div>
-
-    </div><!-- end modal-body -->
-    <div class="mfooter">
+    <!-- Footer buttons -->
+    <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:8px;padding:0.75rem 1.25rem max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border2)">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn btn-p" onclick="saveTest()">Save changes</button>
     </div>

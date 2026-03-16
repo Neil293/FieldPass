@@ -1661,8 +1661,9 @@ function render(){
 function deviceRow(d,hideSuburb){
   const url=mapsUrl(d);
   const hasGps=!!(d.lat&&d.lng);
-  const isComplete=getStatus(d)==='complete';
-  const isFail=isComplete&&d.testResult==='Fail';
+  const status=getStatus(d);
+  const isComplete=status==='complete';
+  const isFail=status==='failed';
   const distLabel=d._dist!=null
     ?`<span style="font-size:10px;color:var(--accent);font-weight:600;background:var(--accent-light);padding:1px 6px;border-radius:10px;white-space:nowrap">${d._dist<1?(d._dist*1000).toFixed(0)+'m':d._dist.toFixed(1)+'km'}</span>`
     :'';

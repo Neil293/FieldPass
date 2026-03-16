@@ -559,6 +559,14 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   <div class="metrics" id="metrics"></div>
   <!-- Mobile month quick-select pills + count -->
   <div id="mob-filter-bar" style="display:none;padding:5px 0.75rem 4px;display:flex;align-items:center;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+    <!-- Pin/location quick button -->
+    <button id="mob-pin-btn" onclick="sortByNearest()" title="Sort by nearest" style="font-family:var(--sans);flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,0,0,.12);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:0">
+      <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" id="mob-pin-icon">
+        <circle cx="7" cy="7" r="4" fill="currentColor" opacity=".9"/>
+        <path d="M7 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="7" cy="7" r="2" fill="white"/>
+      </svg>
+    </button>
     <div id="mob-month-pills" style="display:flex;gap:5px;flex-shrink:0"></div>
     <span id="mob-tcount" style="font-size:12px;color:var(--text3);white-space:nowrap;flex-shrink:0;margin-left:auto;padding-left:4px"></span>
   </div>
@@ -1455,7 +1463,6 @@ function renderMonthPills(){
   if(!pills) return;
   const now=new Date();
   const cur=now.getMonth();
-  // Show 3 months: previous, current, next
   const indices=[(cur+11)%12, cur, (cur+1)%12];
   const selected=document.getElementById('f-sched-month').value;
   pills.innerHTML=indices.map(i=>{
@@ -1463,6 +1470,14 @@ function renderMonthPills(){
     const isSelected=selected===name;
     return `<button onclick="selectMonthPill('${name}')" style="font-family:var(--sans);font-size:12px;font-weight:${isSelected?'700':'500'};padding:5px 12px;border-radius:20px;border:1px solid ${isSelected?'transparent':'rgba(0,0,0,.12)'};background:${isSelected?'var(--accent)':'var(--surface)'};color:${isSelected?'#fff':'var(--text2)'};cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0">${name}</button>`;
   }).join('');
+  // Sync pin button active state
+  const pinBtn=document.getElementById('mob-pin-btn');
+  const pinIcon=document.getElementById('mob-pin-icon');
+  if(pinBtn){
+    pinBtn.style.background=sortGpsOrigin?'#e53935':'var(--surface)';
+    pinBtn.style.borderColor=sortGpsOrigin?'#e53935':'rgba(0,0,0,.12)';
+    if(pinIcon) pinIcon.style.color=sortGpsOrigin?'#fff':'var(--text3)';
+  }
 }
 
 function selectMonthPill(month){

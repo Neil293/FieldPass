@@ -583,7 +583,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 <footer>ComplyTrack &mdash; Data stored locally in your browser.</footer>
 </div><!-- end #app -->
 <div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);z-index:500;align-items:flex-end;justify-content:center" onclick="bgClose(event)">
-  <div id="modal-sheet" style="background:var(--surface);width:100%;max-height:92vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.3)">
+  <div id="modal-sheet" style="background:var(--surface);width:100%;max-height:92dvh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.3)">
     <!-- Drag handle -->
     <div style="flex-shrink:0;display:flex;justify-content:center;padding:10px 0 0">
       <div style="width:40px;height:4px;background:rgba(0,0,0,.15);border-radius:2px"></div>
@@ -761,19 +761,22 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 </div>
 
 <!-- Wizard Modal -->
-<div class="mbg" id="wizard-modal" style="display:none" onclick="bgWizardClose(event)">
-  <div class="modal" style="width:460px">
-    <div class="mhdr">
-      <div>
-        <div class="mtitle" id="wiz-title">Complete missing info</div>
-        <div class="msub-info" id="wiz-progress"></div>
-      </div>
-      <button class="mclose" onclick="closeWizard()">&#x2715;</button>
+<div id="wizard-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:600;align-items:flex-end;justify-content:center" onclick="bgWizardClose(event)">
+  <div style="background:var(--surface);width:100%;max-height:80vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.3)">
+    <div style="flex-shrink:0;display:flex;justify-content:center;padding:10px 0 0">
+      <div style="width:40px;height:4px;background:rgba(0,0,0,.15);border-radius:2px"></div>
     </div>
-    <div class="modal-body">
+    <div style="flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between;padding:0.875rem 1.25rem 0.75rem;border-bottom:1px solid var(--border2);gap:12px">
+      <div>
+        <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em" id="wiz-title">Complete missing info</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px" id="wiz-progress"></div>
+      </div>
+      <button onclick="closeWizard()" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:15px;color:var(--text2);flex-shrink:0">&#x2715;</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem 1.25rem">
       <div id="wiz-body"></div>
     </div>
-    <div class="mfooter" style="justify-content:stretch">
+    <div style="flex-shrink:0;display:flex;gap:8px;padding:0.75rem 1.25rem max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border2)">
       <button class="btn" onclick="wizardSkip()" style="flex:1">Skip</button>
       <button class="btn btn-p" onclick="wizardNext()" id="wiz-next-btn" style="flex:2">Next</button>
     </div>
@@ -1654,6 +1657,25 @@ function wizUseLocation(){
 
 function closeWizard(){document.getElementById('wizard-modal').style.display='none';}
 function bgWizardClose(e){if(e.target===document.getElementById('wizard-modal'))closeWizard();}
+
+// ── Keyboard / viewport resize handler ──────────────────
+// When soft keyboard opens on Android, window.innerHeight shrinks.
+// We resize the modal sheet so footer buttons stay visible.
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',()=>{
+    const sheet=document.getElementById('modal-sheet');
+    if(!sheet) return;
+    const modal=document.getElementById('modal');
+    if(!modal||modal.style.display==='none') return;
+    const maxH=window.visualViewport.height - 20;
+    sheet.style.maxHeight=maxH+'px';
+    // Scroll focused input into view
+    const focused=document.activeElement;
+    if(focused&&focused!==document.body){
+      setTimeout(()=>focused.scrollIntoView({block:'center',behavior:'smooth'}),100);
+    }
+  });
+}
 // ────────────────────────────────────────────────────────
 
 function closeModal(){

@@ -159,8 +159,8 @@ tbody tr:hover .row-acts{opacity:1}
 .btn:hover{background:var(--surface2)}
 .btn-p{background:var(--accent);color:#fff;border-color:transparent}
 .btn-p:hover{background:#163f5a}
-.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:#fff;font-size:13px;font-weight:500;padding:10px 16px;border-radius:var(--r);z-index:999;transform:translateY(16px);opacity:0;transition:all .22s;pointer-events:none}
-.toast.show{transform:translateY(0);opacity:1}
+.toast{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%) translateY(8px);background:rgba(30,30,30,.92);color:#fff;font-size:13px;font-weight:500;padding:9px 20px;border-radius:20px;z-index:150;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;backdrop-filter:blur(4px)}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border-top:1px solid var(--border2);margin-top:2rem}
 .mfbtn{font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);cursor:pointer;white-space:nowrap;transition:all .15s}
 .mfbtn.active{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.5);color:#fff;font-weight:600}
@@ -346,8 +346,8 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   /* Prevent iOS zoom on inputs */
   select,input[type=text],input[type=email],input[type=password],textarea{font-size:16px!important}
 
-  /* ── Toast above bottom nav ── */
-  .toast{bottom:5.5rem;right:0.75rem;left:0.75rem;text-align:center}
+  /* ── Toast ── */
+  .toast{bottom:5.5rem}
 
   /* ── Bottom nav bar ── */
   #mobile-nav{display:flex}
@@ -2063,7 +2063,8 @@ function exportCSV(){
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'),1500);
 }
 
 // ── Auth system ────────────────────────────────────────

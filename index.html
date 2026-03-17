@@ -1498,11 +1498,14 @@ const SYNC_INTERVAL_KEY='ct_sync_interval_v1';
 let _autoSyncTimer=null;
 
 function getSyncInterval(){
-  return localStorage.getItem(SYNC_INTERVAL_KEY)||'onsave';
+  // Per-user storage — keyed by username so each user has their own setting
+  const key=SYNC_INTERVAL_KEY+(currentUser?'_'+currentUser.username:'');
+  return localStorage.getItem(key)||'onsave';
 }
 
 function setSyncInterval(interval){
-  localStorage.setItem(SYNC_INTERVAL_KEY,interval);
+  const key=SYNC_INTERVAL_KEY+(currentUser?'_'+currentUser.username:'');
+  localStorage.setItem(key,interval);
   clearInterval(_autoSyncTimer);
   _autoSyncTimer=null;
   // Start timer if interval-based

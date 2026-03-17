@@ -742,15 +742,14 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       </div>
     </div>
     <!-- Footer buttons -->
-    <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0.75rem 1.25rem max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border2)">
-      <button id="btn-delete-device" onclick="deleteDevice()" style="font-family:var(--sans);display:none;padding:9px 16px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid rgba(184,50,50,.25);background:rgba(184,50,50,.06);color:var(--red);cursor:pointer;display:none;align-items:center;gap:6px;white-space:nowrap;letter-spacing:.01em">
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0.75rem 1.25rem max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border2)">
+      <button id="btn-delete-device" onclick="deleteDevice()" style="font-family:var(--sans);display:none;height:44px;padding:0 14px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid rgba(184,50,50,.25);background:rgba(184,50,50,.06);color:var(--red);cursor:pointer;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M4.5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M5 6v4M8 6v4M2.5 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9l.7-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Delete Device
       </button>
-      <div style="display:flex;gap:8px;margin-left:auto">
-        <button class="btn" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-p" onclick="saveTest()">Save changes</button>
-      </div>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeModal()" style="height:44px;padding:0 18px;font-size:14px">Cancel</button>
+      <button class="btn btn-p" onclick="saveTest()" style="height:44px;padding:0 22px;font-size:14px;font-weight:600">Save changes</button>
     </div>
   </div>
 </div>

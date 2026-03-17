@@ -740,16 +740,18 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         </div>
         <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Test observations, follow-up actions…"></textarea></div>
       </div>
+      <!-- Delete device — admin only -->
+      <div id="delete-device-wrap" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border2)">
+        <button id="btn-delete-device" onclick="deleteDevice()" style="font-family:var(--sans);width:100%;padding:12px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid rgba(184,50,50,.25);background:rgba(184,50,50,.06);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M4.5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M5 6v4M8 6v4M2.5 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9l.7-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Delete Device
+        </button>
+      </div>
     </div>
     <!-- Footer buttons -->
-    <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0.75rem 1.25rem max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border2)">
-      <button id="btn-delete-device" onclick="deleteDevice()" style="font-family:var(--sans);display:none;height:44px;padding:0 14px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid rgba(184,50,50,.25);background:rgba(184,50,50,.06);color:var(--red);cursor:pointer;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M4.5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M5 6v4M8 6v4M2.5 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9l.7-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Delete Device
-      </button>
-      <div style="flex:1"></div>
-      <button class="btn" onclick="closeModal()" style="height:44px;padding:0 18px;font-size:14px">Cancel</button>
-      <button class="btn btn-p" onclick="saveTest()" style="height:44px;padding:0 22px;font-size:14px;font-weight:600">Save changes</button>
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0.75rem 1rem max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border2)">
+      <button class="btn" onclick="closeModal()" style="height:44px;padding:0 16px;font-size:14px;white-space:nowrap">Cancel</button>
+      <button class="btn btn-p" onclick="saveTest()" style="height:44px;padding:0 20px;font-size:14px;font-weight:600;white-space:nowrap">Save changes</button>
     </div>
   </div>
 </div>
@@ -1889,15 +1891,33 @@ function openDevice(id){
   const histEl=document.getElementById('m-test-history');
   if(histEl){
     if(isAdmin&&d.testLog&&d.testLog.length>0){
-      const rows=[...d.testLog].reverse().slice(0,8).map(l=>`<tr>
-        <td style="font-size:12px;color:var(--text2)">${fmtDate(l.date)}</td>
-        <td><span class="badge ${l.result==='Pass'?'b-complete':'b-fail'}"><span class="bdot"></span>${l.result}</span></td>
-        <td style="font-size:12px;color:var(--text2)">${l.tester}</td>
-        <td style="font-size:12px;color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.notes||'—'}</td>
-      </tr>`).join('');
+      const reversed=[...d.testLog].reverse().slice(0,8);
+      const rows=reversed.map((l,i)=>{
+        // original index in testLog (reversed, so map back)
+        const origIdx=d.testLog.length-1-i;
+        const resultClass=l.result==='Pass'?'b-complete':l.result==='Fail'?'b-failed':l.result==='Repaired'?'':'b-pend';
+        const deleteBtn=can('manageUsers')
+          ?`<button onclick="deleteTestLogEntry(${d.id},${origIdx})" title="Delete record" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);display:flex;align-items:center;opacity:.6" onmouseover="this.style.opacity=1;this.style.color='var(--red)'" onmouseout="this.style.opacity=.6;this.style.color='var(--text3)'">
+              <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M4.5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M5 6v4M8 6v4M2.5 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9l.7-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>`
+          :'';
+        return`<tr style="border-bottom:1px solid var(--border2)">
+          <td style="padding:6px 6px;font-size:12px;color:var(--text2);white-space:nowrap">${fmtDate(l.date)}</td>
+          <td style="padding:6px 6px"><span class="badge ${resultClass}"><span class="bdot"></span>${l.result}</span></td>
+          <td style="padding:6px 6px;font-size:12px;color:var(--text2)">${l.tester}</td>
+          <td style="padding:6px 6px;font-size:12px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.notes||'—'}</td>
+          <td style="padding:6px 0;text-align:right">${deleteBtn}</td>
+        </tr>`;
+      }).join('');
       histEl.innerHTML=`<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Test history</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="border-bottom:1px solid var(--border2)"><th style="text-align:left;padding:4px 8px;color:var(--text3);font-size:11px">Date</th><th style="text-align:left;padding:4px 8px;color:var(--text3);font-size:11px">Result</th><th style="text-align:left;padding:4px 8px;color:var(--text3);font-size:11px">Tester</th><th style="text-align:left;padding:4px 8px;color:var(--text3);font-size:11px">Notes</th></tr></thead>
+          <thead><tr style="border-bottom:1px solid var(--border2)">
+            <th style="text-align:left;padding:4px 6px;color:var(--text3);font-size:11px">Date</th>
+            <th style="text-align:left;padding:4px 6px;color:var(--text3);font-size:11px">Result</th>
+            <th style="text-align:left;padding:4px 6px;color:var(--text3);font-size:11px">Tester</th>
+            <th style="text-align:left;padding:4px 6px;color:var(--text3);font-size:11px">Notes</th>
+            <th></th>
+          </tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
       histEl.style.display='block';
@@ -1933,6 +1953,8 @@ function openDevice(id){
   document.getElementById('modal').style.display='flex';
   document.body.classList.add('modal-open');
   // Show delete button for admins only
+  const delWrap=document.getElementById('delete-device-wrap');
+  if(delWrap) delWrap.style.display=can('manageUsers')?'block':'none';
   const delBtn=document.getElementById('btn-delete-device');
   if(delBtn) delBtn.style.display=can('manageUsers')?'flex':'none';
   setTimeout(_forceModalWidth,10);
@@ -1943,6 +1965,33 @@ function openDevice(id){
 }
 
 // ── Custom confirm dialog ────────────────────────────────
+function deleteTestLogEntry(deviceId, logIndex){
+  ctConfirm(
+    'Delete this test record? This cannot be undone.',
+    ()=>{
+      const d=devices.find(x=>x.id===deviceId);
+      if(!d||!d.testLog) return;
+      d.testLog.splice(logIndex,1);
+      // If no log entries left, clear the test date/result
+      if(d.testLog.length===0){
+        d.testDate='';
+        d.testResult='Pending';
+      } else {
+        // Restore latest log entry as current test
+        const last=d.testLog[d.testLog.length-1];
+        d.testDate=last.date;
+        d.testResult=last.result;
+        d.notes=last.notes||'';
+      }
+      save();
+      // Refresh the modal
+      openDevice(deviceId);
+      showToast('Test record deleted.');
+    },
+    'Delete record', 'Delete', true
+  );
+}
+
 function deleteDevice(){
   const d=devices.find(x=>x.id===editId);
   if(!d) return;

@@ -1378,12 +1378,14 @@ function firestoreCollectionName(clientId){
   return `devices_${clientId}`;
 }
 
-function setSyncStatus(status){
+function setSyncStatus(status, detail){
   const indicator=document.getElementById('sync-indicator');
   const dot=document.getElementById('sync-dot');
   const label=document.getElementById('sync-label');
   if(!indicator) return;
   indicator.style.display='flex';
+  // Remove old click handler
+  indicator.onclick=null;
   if(status==='synced'){
     dot.className='sync-dot'; label.textContent='Synced';
   } else if(status==='syncing'){
@@ -1391,16 +1393,18 @@ function setSyncStatus(status){
   } else if(status==='offline'){
     dot.className='sync-dot error'; label.textContent='Offline';
   } else if(status==='error'){
-    dot.className='sync-dot error'; label.textContent='Sync error';
+    dot.className='sync-dot error';
+    label.textContent='Sync error — tap';
+    const msg=detail||'Unknown error';
+    indicator.onclick=()=>alert('Sync error:\n\n'+msg+'\n\nFix: Go to Firebase Console → Firestore → Rules\nand set: allow read, write: if true;');
   }
 }
 
 function forceSyncNow(){
   if(!window._firebaseReady||!window._db){
     const reason=window._firebaseError||'Firebase not loaded';
-    showToast('Not connected: '+reason);
-    setSyncStatus('error');
-    alert('Firebase connection failed:\n\n'+reason+'\n\nMost likely cause: Firestore security rules are blocking access.\n\nGo to Firebase Console → Firestore → Rules and set:\nallow read, write: if true;');
+    setSyncStatus('error', 'Firebase not loaded: '+reason);
+    showToast('Firebase not ready — tap sync indicator for details');
     return;
   }
   setSyncStatus('syncing');
@@ -1447,11 +1451,9 @@ function forceSyncNow(){
       startFirebaseListener();
     }catch(err){
       console.error('Force sync failed:',err);
-      setSyncStatus('error');
-      // Show specific error to help diagnose
-      const msg=err.code?err.code:err.message||'unknown';
-      showToast('Sync failed: '+msg);
-      alert('Sync error detail:\n\n'+msg+'\n\nCheck Firestore security rules allow read/write.\nProject: complytrack-6ac7e');
+      const msg=(err.code||'')+' '+( err.message||'unknown error');
+      setSyncStatus('error', msg);
+      showToast('Sync failed — tap sync indicator for details');
     }
   })();
 }
@@ -1493,7 +1495,7 @@ function syncToFirebase(){
       setSyncStatus('synced');
     }catch(err){
       console.error('Firebase sync error:',err);
-      setSyncStatus(navigator.onLine?'error':'offline');
+      setSyncStatus(navigator.onLine?'error':'offline', err.code+': '+err.message);
     }
   },800);
 }
@@ -1524,7 +1526,7 @@ function startFirebaseListener(){
     },
     (err)=>{
       console.error('Firestore listener error:',err);
-      setSyncStatus(navigator.onLine?'error':'offline');
+      setSyncStatus(navigator.onLine?'error':'offline', err.code+': '+err.message);
     }
   );
 
@@ -1559,7 +1561,7 @@ window.addEventListener('firebase-ready',()=>{
 
 // Show error if Firebase failed to load
 window.addEventListener('firebase-failed',()=>{
-  setSyncStatus('error');
+  setSyncStatus('error', 'Firebase failed to load: '+(window._firebaseError||'unknown'));
   console.warn('Firebase unavailable:', window._firebaseError);
 });
 

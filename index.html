@@ -1027,6 +1027,13 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           </select>
         </div>
       </div>
+      <div class="field"><label>Company name</label><input type="text" id="nu-company" placeholder="e.g. Fairy Meadow Plumbing"></div>
+      <div class="frow">
+        <div class="field"><label>Phone</label><input type="tel" id="nu-phone" placeholder="e.g. 02 4221 0000"></div>
+        <div class="field"><label>Mobile</label><input type="tel" id="nu-mobile" placeholder="e.g. 0400 000 000"></div>
+      </div>
+      <div class="field"><label>Email</label><input type="email" id="nu-email" placeholder="e.g. neil@fairymeadowplumbing.com.au"></div>
+      <div class="field"><label>Address</label><input type="text" id="nu-addr" placeholder="e.g. 123 Main St, Fairy Meadow NSW 2519"></div>
       <div style="background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);padding:12px">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:10px">Permissions</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="nu-perms">
@@ -1131,11 +1138,12 @@ function getClients(){
   // Default: SCC built-in client
   return [{
     id:SCC_CLIENT_ID,
-    name:'Shoalhaven City Council',
-    abbr:'SCC',
+    name:'Fairy Meadow Plumbing',
+    abbr:'FMP',
     colour:'#1a4d6e',
     builtIn:true,
-    notes:''
+    notes:'',
+    contactInfo:{org:'Fairy Meadow Plumbing'}
   }];
 }
 function saveClients(clients){
@@ -2634,12 +2642,16 @@ function emailSuburbReport(suburb, evt){
   const failSection=failed.length?`\nDEVICES REQUIRING ATTENTION (${failed.length}):\n`+failed.map(d=>`  ⚠ Serial: ${d.serial} — ${d.make} ${d.model} — ${d.location.slice(0,60)}`).join('\n')+'\n':'';
 
   // Sender / org info from client settings
-  const orgLine=ci.org?(ci.dept?ci.org+' — '+ci.dept:ci.org):(getActiveClient().name);
+  const orgLine=ci.org?(ci.dept?ci.org+' — '+ci.dept:ci.org):(currentUser&&currentUser.company?currentUser.company:'Fairy Meadow Plumbing');
   const senderName=ci.contact||currentUser.name;
-  const senderTitle=ci.title?'\n'+ci.title:'';
-  const phoneLines=[ci.phone?'Phone: '+ci.phone:'',ci.mobile?'Mobile: '+ci.mobile:''].filter(Boolean).join(' | ');
-  const emailLine=ci.email?'Email: '+ci.email:'';
-  const footerNote=ci.footer||'This report was generated from the ComplyTrack.\nPlease retain this record for compliance purposes.';
+  const senderCompany=currentUser&&currentUser.company?currentUser.company:(ci.org||'Fairy Meadow Plumbing');
+  const phoneLines=[
+    currentUser&&currentUser.phone?'Phone: '+currentUser.phone:(ci.phone?'Phone: '+ci.phone:''),
+    currentUser&&currentUser.mobile?'Mobile: '+currentUser.mobile:(ci.mobile?'Mobile: '+ci.mobile:'')
+  ].filter(Boolean).join(' | ');
+  const emailLine=currentUser&&currentUser.email?'Email: '+currentUser.email:(ci.email?'Email: '+ci.email:'');
+  const addrLine=currentUser&&currentUser.addr?currentUser.addr:(ci.addr||'');
+  const footerNote=ci.footer||'This report was generated from ComplyTrack.\nPlease retain this record for compliance purposes.';
 
   const subject=`Backflow Testing Complete — ${suburb} — ${year}`;
   const body=`Hi,
@@ -2664,9 +2676,9 @@ ${lines}
 ${footerNote}
 
 Regards,
-${senderName}${senderTitle}
-${orgLine}
-${[phoneLines,emailLine,ci.addr||''].filter(Boolean).join('\n')}`;
+${senderName}
+${senderCompany}
+${[phoneLines,emailLine,addrLine].filter(Boolean).join('\n')}`;
 
   // Build mailto with To/CC from client info
   const to=ci.recipient||'';
@@ -2918,7 +2930,7 @@ function resetAdminAccount(e){
   const adminPerms={recordTests:true,editDevices:true,addDevices:true,viewHistory:true,exportCSV:true,manageUsers:true};
   // Wipe ALL users and recreate only admin
   localStorage.setItem('scc_users_v1',JSON.stringify([
-    {username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:adminPerms}
+    {username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:adminPerms}
   ]));
   const err=document.getElementById('login-err');
   err.style.display='block';
@@ -2936,7 +2948,7 @@ function initUsers(){
   // so stale hashed passwords from old versions don't block login
   const users=getUsers();
   if(!users.length){
-    saveUsers([{username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:PRESETS.admin}]);
+    saveUsers([{username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:PRESETS.admin}]);
     return;
   }
   // Migrate old role-based users to permissions
@@ -2951,7 +2963,7 @@ function initUsers(){
   // Safety: ensure at least one admin always exists
   const hasAdmin=users.some(u=>u.permissions&&u.permissions.manageUsers);
   if(!hasAdmin){
-    users.push({username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:PRESETS.admin});
+    users.push({username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:PRESETS.admin});
     saveUsers(users);
   }
 }
@@ -3191,7 +3203,7 @@ function openEditClient(id){
         <div style="border-top:1px solid var(--border2);margin:1.25rem 0 1rem"></div>
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:10px">Contact Information</div>
         <div class="frow">
-          <div class="field"><label>Organisation name</label><input type="text" id="ec-org" value="${esc(ci.org||'')}" placeholder="e.g. Shoalhaven City Council"></div>
+          <div class="field"><label>Organisation name</label><input type="text" id="ec-org" value="${esc(ci.org||'')}" placeholder="e.g. Fairy Meadow Plumbing"></div>
           <div class="field"><label>Department / team</label><input type="text" id="ec-dept" value="${esc(ci.dept||'')}" placeholder="e.g. Water Operations"></div>
         </div>
         <div class="frow">
@@ -3515,6 +3527,13 @@ function openEditUser(i){
         <div class="field"><label>New password <span style="font-weight:400;color:var(--text3)">(leave blank to keep current)</span></label>
           <input type="password" id="eu-pass" placeholder="Enter new password to change" autocomplete="new-password">
         </div>
+        <div class="field"><label>Company name</label><input type="text" id="eu-company" value="${(u.company||'').replace(/"/g,'&quot;')}" placeholder="e.g. Fairy Meadow Plumbing"></div>
+        <div class="frow">
+          <div class="field"><label>Phone</label><input type="tel" id="eu-phone" value="${(u.phone||'').replace(/"/g,'&quot;')}" placeholder="e.g. 02 4221 0000"></div>
+          <div class="field"><label>Mobile</label><input type="tel" id="eu-mobile" value="${(u.mobile||'').replace(/"/g,'&quot;')}" placeholder="e.g. 0400 000 000"></div>
+        </div>
+        <div class="field"><label>Email</label><input type="email" id="eu-email" value="${(u.email||'').replace(/"/g,'&quot;')}" placeholder="e.g. neil@fairymeadowplumbing.com.au"></div>
+        <div class="field"><label>Address</label><input type="text" id="eu-addr" value="${(u.addr||'').replace(/"/g,'&quot;')}" placeholder="e.g. 123 Main St, Fairy Meadow NSW 2519"></div>
         <div class="field">
           <label>Preset</label>
           <select id="eu-preset" onchange="applyEditUserPreset()" ${isSelf?'disabled style="opacity:.6"':''}>
@@ -3573,7 +3592,12 @@ function saveEditUser(i){
     const el=document.getElementById('eu-'+k);
     permissions[k]=el?el.checked:false;
   });
-  users[i]={...u,name,username,permissions};
+  const company=document.getElementById('eu-company').value.trim();
+  const phone=document.getElementById('eu-phone').value.trim();
+  const mobile=document.getElementById('eu-mobile').value.trim();
+  const email=document.getElementById('eu-email').value.trim();
+  const addr=document.getElementById('eu-addr').value.trim();
+  users[i]={...u,name,username,permissions,company,phone,mobile,email,addr};
   if(newPass) users[i].password=hashPass(newPass);
   saveUsers(users);
   // Update currentUser if editing self
@@ -3600,10 +3624,10 @@ function togglePerm(i,key,val){
 }
 
 function openAddUserModal(){
-  // Reset fields and apply default preset
-  document.getElementById('nu-user').value='';
-  document.getElementById('nu-pass').value='';
-  document.getElementById('nu-name').value='';
+  ['nu-user','nu-pass','nu-name','nu-company','nu-phone','nu-mobile','nu-email','nu-addr'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
   document.getElementById('nu-preset').value='tester';
   applyPreset();
   document.getElementById('add-user-modal').style.display='flex';
@@ -3613,14 +3637,20 @@ function addUser(){
   const username=document.getElementById('nu-user').value.trim().toLowerCase();
   const password=document.getElementById('nu-pass').value;
   const name=document.getElementById('nu-name').value.trim();
+  const company=document.getElementById('nu-company').value.trim();
+  const phone=document.getElementById('nu-phone').value.trim();
+  const mobile=document.getElementById('nu-mobile').value.trim();
+  const email=document.getElementById('nu-email').value.trim();
+  const addr=document.getElementById('nu-addr').value.trim();
   if(!username||!password||!name){showToast('Name, username and password are required.');return;}
   const users=getUsers();
   if(users.find(u=>u.username===username)){showToast('Username already exists.');return;}
-  users.push({username,password:hashPass(password),name,permissions:getNewUserPerms()});
+  users.push({username,password:hashPass(password),name,company,phone,mobile,email,addr,permissions:getNewUserPerms()});
   saveUsers(users);
-  document.getElementById('nu-user').value='';
-  document.getElementById('nu-pass').value='';
-  document.getElementById('nu-name').value='';
+  ['nu-user','nu-pass','nu-name','nu-company','nu-phone','nu-mobile','nu-email','nu-addr'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
   document.getElementById('nu-preset').value='tester';
   applyPreset();
   document.getElementById('add-user-modal').style.display='none';

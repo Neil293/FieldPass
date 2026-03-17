@@ -554,6 +554,10 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="6" r="3" stroke="white" stroke-width="1.4"/><path d="M7.5 14C7.5 14 2 10 2 6a5.5 5.5 0 0111 0C13 10 7.5 14 7.5 14z" stroke="white" stroke-width="1.4" fill="none"/></svg>
       Map View
     </button>
+    <button onclick="openReports();toggleMobileMenu()" style="font-family:var(--sans);background:var(--accent);border:none;color:#fff;padding:14px 12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="white" stroke-width="1.4"/><path d="M5 5h5M5 7.5h5M5 10h3" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Reports
+    </button>
     <button id="mob-menu-settings" onclick="openSettings('users');toggleMobileMenu()" style="font-family:var(--sans);background:var(--accent);border:none;color:#fff;padding:14px 12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center">
       &#9881; Settings
     </button>
@@ -1066,6 +1070,29 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   <div id="map-picker-container" style="flex:1;position:relative;overflow:hidden">
     <div id="map-picker-map" style="position:absolute;inset:0;width:100%;height:100%"></div>
   </div>
+</div>
+
+<!-- Reports Modal -->
+<div id="reports-modal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:400;flex-direction:column;overflow:hidden">
+  <!-- Header -->
+  <div style="background:var(--accent);color:#fff;padding:0 1rem;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 15 15" fill="none"><rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="white" stroke-width="1.4"/><path d="M5 5h5M5 7.5h5M5 10h3" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Reports
+    </div>
+    <button onclick="closeReports()" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center">&#x2715;</button>
+  </div>
+  <!-- Report tabs -->
+  <div style="background:var(--accent);display:flex;gap:0;border-top:1px solid rgba(255,255,255,.15);flex-shrink:0">
+    <button class="rtab active" id="rtab-suburb" onclick="switchReportTab('suburb')" style="font-family:var(--sans);font-size:13px;font-weight:600;padding:10px 16px;border:none;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;border-bottom:2px solid #fff;white-space:nowrap">
+      📍 By Suburb
+    </button>
+    <button class="rtab" id="rtab-status" onclick="switchReportTab('status')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
+      📊 By Status
+    </button>
+  </div>
+  <!-- Report content -->
+  <div id="reports-content" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem"></div>
 </div>
 
 <!-- Custom confirm dialog -->
@@ -2009,6 +2036,133 @@ function deleteDevice(){
     'Delete device', 'Delete', true
   );
 }
+// ── Reports ──────────────────────────────────────────────
+let currentReportTab='suburb';
+
+function openReports(){
+  document.getElementById('reports-modal').style.display='flex';
+  renderReport('suburb');
+}
+
+function closeReports(){
+  document.getElementById('reports-modal').style.display='none';
+}
+
+function switchReportTab(tab){
+  currentReportTab=tab;
+  ['suburb','status'].forEach(t=>{
+    const btn=document.getElementById('rtab-'+t);
+    if(!btn) return;
+    if(t===tab){
+      btn.style.background='rgba(255,255,255,.15)';
+      btn.style.color='#fff';
+      btn.style.borderBottom='2px solid #fff';
+      btn.style.fontWeight='600';
+    } else {
+      btn.style.background='transparent';
+      btn.style.color='rgba(255,255,255,.7)';
+      btn.style.borderBottom='2px solid transparent';
+      btn.style.fontWeight='500';
+    }
+  });
+  renderReport(tab);
+}
+
+function renderReport(tab){
+  const el=document.getElementById('reports-content');
+  if(!el) return;
+  const showDecom=getSetting('showDecommissioned',true);
+  const activeDevices=devices.filter(d=>showDecom||getStatus(d)!=='decommissioned');
+
+  if(tab==='suburb'){
+    // Group by suburb, count by status
+    const suburbs={};
+    activeDevices.forEach(d=>{
+      const s=d.suburb||'Unknown';
+      if(!suburbs[s]) suburbs[s]={total:0,complete:0,failed:0,overdue:0,due:0,repaired:0,decommissioned:0,pending:0,other:0};
+      suburbs[s].total++;
+      const st=getStatus(d);
+      if(suburbs[s][st]!==undefined) suburbs[s][st]++;
+      else suburbs[s].other++;
+    });
+    const sorted=Object.entries(suburbs).sort((a,b)=>a[0].localeCompare(b[0]));
+    const total=activeDevices.length;
+    const totalComplete=activeDevices.filter(d=>getStatus(d)==='complete'||getStatus(d)==='repaired').length;
+    const totalOverdue=activeDevices.filter(d=>getStatus(d)==='overdue').length;
+
+    el.innerHTML=`
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1.25rem">
+        <div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center;border:1px solid var(--border2)">
+          <div style="font-size:22px;font-weight:700;color:var(--accent)">${total}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Total</div>
+        </div>
+        <div style="background:var(--green-bg);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(26,102,54,.15)">
+          <div style="font-size:22px;font-weight:700;color:var(--green)">${totalComplete}</div>
+          <div style="font-size:11px;color:var(--green);margin-top:2px">Complete</div>
+        </div>
+        <div style="background:var(--red-bg);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(184,50,50,.15)">
+          <div style="font-size:22px;font-weight:700;color:var(--red)">${totalOverdue}</div>
+          <div style="font-size:11px;color:var(--red);margin-top:2px">Overdue</div>
+        </div>
+      </div>
+      <!-- Suburb table -->
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">${sorted.length} suburbs</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${sorted.map(([suburb,c])=>{
+          const pct=c.total?Math.round(((c.complete+c.repaired)/c.total)*100):0;
+          const hasIssue=c.overdue>0||c.failed>0;
+          return`<div style="background:var(--surface);border-radius:12px;border:1px solid ${hasIssue?'rgba(184,50,50,.2)':'var(--border2)'};padding:12px;display:flex;align-items:center;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${suburb}</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <span style="font-size:11px;color:var(--text3)">${c.total} devices</span>
+                ${c.complete+c.repaired>0?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ ${c.complete+c.repaired} done</span>`:''}
+                ${c.overdue>0?`<span style="font-size:11px;color:var(--red);font-weight:600">⚠ ${c.overdue} overdue</span>`:''}
+                ${c.failed>0?`<span style="font-size:11px;color:var(--red);font-weight:500">✗ ${c.failed} failed</span>`:''}
+                ${c.due>0?`<span style="font-size:11px;color:var(--amber);font-weight:500">${c.due} due</span>`:''}
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:18px;font-weight:700;color:${pct===100?'var(--green)':pct>50?'var(--amber)':'var(--text2)'}">${pct}%</div>
+              <div style="font-size:10px;color:var(--text3)">complete</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+
+  } else {
+    // By status
+    const statusOrder=['overdue','due','due_next','upcoming','failed','complete','repaired','decommissioned','pending'];
+    const statusLabels={overdue:'Overdue',due:'Due this month',due_next:'Due next month',upcoming:'Upcoming',failed:'Failed',complete:'Complete',repaired:'Repaired',decommissioned:'Decommissioned',pending:'Pending'};
+    const statusColours={overdue:'var(--red)',due:'#e67e22',due_next:'#1976d2',upcoming:'#64b5f6',failed:'var(--red)',complete:'var(--green)',repaired:'#1565c0',decommissioned:'#888',pending:'var(--text3)'};
+    const statusBgs={overdue:'var(--red-bg)',due:'#fef6e6',due_next:'#e3f0fc',upcoming:'#f0f7ff',failed:'var(--red-bg)',complete:'var(--green-bg)',repaired:'#e3f0fc',decommissioned:'#f0f0f0',pending:'var(--surface2)'};
+    const counts={};
+    statusOrder.forEach(s=>counts[s]=0);
+    activeDevices.forEach(d=>{const s=getStatus(d);if(counts[s]!==undefined)counts[s]++;});
+
+    el.innerHTML=`
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Status summary — ${activeDevices.length} devices</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${statusOrder.filter(s=>counts[s]>0).map(s=>{
+          const pct=activeDevices.length?Math.round((counts[s]/activeDevices.length)*100):0;
+          return`<div style="background:${statusBgs[s]};border-radius:12px;padding:12px 14px;border:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:12px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:${statusColours[s]}">${statusLabels[s]}</div>
+              <div style="margin-top:6px;height:4px;background:rgba(0,0,0,.08);border-radius:2px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:${statusColours[s]};border-radius:2px;transition:width .4s"></div>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:22px;font-weight:700;color:${statusColours[s]}">${counts[s]}</div>
+              <div style="font-size:11px;color:${statusColours[s]};opacity:.7">${pct}%</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+}
+
 function ctConfirm(msg, onOk, title='ComplyTrack', okLabel='OK', okDanger=false){
   const overlay=document.getElementById('ct-confirm-overlay');
   document.getElementById('ct-confirm-title').textContent=title;

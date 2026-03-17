@@ -1403,56 +1403,39 @@ function setSyncStatus(status, detail){
 function forceSyncNow(){
   if(!window._firebaseReady||!window._db){
     const reason=window._firebaseError||'Firebase not loaded';
-    setSyncStatus('error', 'Firebase not loaded: '+reason);
-    showToast('Firebase not ready — tap sync indicator for details');
+    setSyncStatus('error','Firebase not ready: '+reason);
+    showToast('Firebase not ready — check internet connection');
     return;
   }
   setSyncStatus('syncing');
-  showToast('Connecting to cloud…');
-  const clientId=getActiveClientId();
-  const colName=firestoreCollectionName(clientId);
+  showToast('Pushing all data to cloud…');
   const db=window._db;
   clearTimeout(_syncTimeout);
   (async()=>{
+    const watchdog=setTimeout(()=>{
+      setSyncStatus('error','Timed out — Firebase quota may be exceeded');
+      showToast('Sync timed out — Firebase quota may be exceeded');
+    },15000);
     try{
-      // Step 1: Test write with a single small doc first
-      const testRef=window._fbDoc(db,colName,'_ping');
-      await window._fbSetDoc(testRef,{ping:true,ts:Date.now()});
-
-      // Step 2: Full device sync
-      showToast('Syncing devices…');
-      const batch=window._fbWriteBatch(db);
-      const colRef=window._fbCollection(db,colName);
-      const existing=await window._fbGetDocs(colRef);
-      const existingIds=new Set(existing.docs.map(d=>d.id).filter(id=>id!=='_ping'));
-      const currentIds=new Set(devices.map(d=>String(d.id)));
-      devices.forEach(device=>{
-        batch.set(window._fbDoc(db,colName,String(device.id)),device);
-      });
-      existingIds.forEach(id=>{
-        if(!currentIds.has(id)) batch.delete(window._fbDoc(db,colName,id));
-      });
-      // Clean up ping
-      batch.delete(testRef);
-      await batch.commit();
-
-      // Step 3: Sync meta (users, clients, settings, templates)
-      showToast('Syncing settings & users…');
-      await window._fbSetDoc(window._fbDoc(db,'ct_meta','app_data'),{
+      await window._fbSetDoc(window._fbDoc(db,'ct_sync','main'),{
+        devices:devices,
+        clientId:getActiveClientId(),
         users:getUsers(),
         clients:getClients(),
         settings:getSettings(),
         templates:getTemplates(),
-        updatedAt:Date.now()
+        updatedAt:Date.now(),
+        updatedBy:currentUser?currentUser.username:''
       });
-
+      clearTimeout(watchdog);
+      localStorage.setItem('ct_sync_ts',String(Date.now()));
       setSyncStatus('synced');
       showToast('✓ All data synced to cloud');
       startFirebaseListener();
     }catch(err){
-      console.error('Force sync failed:',err);
-      const msg=(err.code||'')+' '+( err.message||'unknown error');
-      setSyncStatus('error', msg);
+      clearTimeout(watchdog);
+      const msg=(err.code||'')+' '+(err.message||'');
+      setSyncStatus('error',msg);
       showToast('Sync failed — tap sync indicator for details');
     }
   })();
@@ -1461,95 +1444,74 @@ function forceSyncNow(){
 function syncToFirebase(){
   if(!window._firebaseReady||!window._db) return;
   setSyncStatus('syncing');
-  const clientId=getActiveClientId();
-  const colName=firestoreCollectionName(clientId);
   const db=window._db;
   clearTimeout(_syncTimeout);
+  // Long debounce — batch rapid changes into one write
   _syncTimeout=setTimeout(async()=>{
+    const watchdog=setTimeout(()=>{
+      setSyncStatus('error','Firebase timed out. Your quota may be exceeded — check Firebase Console.');
+    },15000);
     try{
-      const batch=window._fbWriteBatch(db);
-
-      // 1. Sync devices
-      const colRef=window._fbCollection(db,colName);
-      const existing=await window._fbGetDocs(colRef);
-      const existingIds=new Set(existing.docs.map(d=>d.id));
-      const currentIds=new Set(devices.map(d=>String(d.id)));
-      devices.forEach(device=>{
-        batch.set(window._fbDoc(db,colName,String(device.id)),device);
-      });
-      existingIds.forEach(id=>{
-        if(!currentIds.has(id)) batch.delete(window._fbDoc(db,colName,id));
-      });
-
-      // 2. Sync app-wide meta: users, clients, settings, templates
-      const metaRef=window._fbDoc(db,'ct_meta','app_data');
-      batch.set(metaRef,{
+      // Store ALL data as a single document — 1 write per sync instead of 570+
+      const clientId=getActiveClientId();
+      const ref=window._fbDoc(db,'ct_sync','main');
+      await window._fbSetDoc(ref,{
+        devices: devices,
+        clientId: clientId,
         users: getUsers(),
         clients: getClients(),
         settings: getSettings(),
         templates: getTemplates(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        updatedBy: currentUser?currentUser.username:''
       });
-
-      await batch.commit();
+      clearTimeout(watchdog);
       setSyncStatus('synced');
     }catch(err){
+      clearTimeout(watchdog);
       console.error('Firebase sync error:',err);
-      setSyncStatus(navigator.onLine?'error':'offline', err.code+': '+err.message);
+      setSyncStatus('error',(err.code?err.code+' — ':'')+( err.message||'unknown error'));
     }
-  },800);
+  },2000); // 2s debounce — rapid saves only trigger 1 write
 }
 
 function startFirebaseListener(){
   if(!window._firebaseReady||!window._db) return;
   if(_firestoreUnsubscribe){_firestoreUnsubscribe();_firestoreUnsubscribe=null;}
-  const clientId=getActiveClientId();
-  const colName=firestoreCollectionName(clientId);
-  setSyncStatus('syncing');
+  if(_metaUnsubscribe){_metaUnsubscribe();_metaUnsubscribe=null;}
 
-  // Listen for device changes
+  // Listen to the single sync document — 1 read per change instead of 570+
   _firestoreUnsubscribe=window._fbOnSnapshot(
-    window._fbCollection(window._db,colName),
-    (snapshot)=>{
-      const remoteDevices=snapshot.docs.map(d=>d.data());
-      if(remoteDevices.length>0){
-        devices=remoteDevices;
-        const storageKey=deviceKeyForClient(clientId);
-        try{localStorage.setItem(storageKey,JSON.stringify(devices));}catch(e){}
+    window._fbDoc(window._db,'ct_sync','main'),
+    (snap)=>{
+      if(!snap.exists()) return;
+      const data=snap.data();
+      if(!data) return;
+      const localTs=parseInt(localStorage.getItem('ct_sync_ts')||'0');
+      // Only apply if remote is newer and not written by this session
+      if(data.updatedAt&&data.updatedAt>localTs&&data.updatedBy!==( currentUser?currentUser.username:'')){
+        if(data.devices&&data.devices.length>0){
+          devices=data.devices;
+          const storageKey=deviceKeyForClient(getActiveClientId());
+          try{localStorage.setItem(storageKey,JSON.stringify(devices));}catch(e){}
+        }
+        if(data.users) saveUsers(data.users);
+        if(data.clients) saveClients(data.clients);
+        if(data.settings) localStorage.setItem(SETTINGS_KEY,JSON.stringify(data.settings));
+        if(data.templates) localStorage.setItem(TEMPLATES_KEY,JSON.stringify(data.templates));
+        localStorage.setItem('ct_sync_ts',String(data.updatedAt));
         populateSuburbFilter();
         render();
-        if(leafletMap&&document.getElementById('map-modal').style.display!=='none'){
-          refreshMapMarkers();
-        }
+        renderClientSwitcher();
+        updateClientUI();
+        showToast('↓ Data updated from cloud');
       }
       setSyncStatus('synced');
     },
     (err)=>{
       console.error('Firestore listener error:',err);
-      setSyncStatus(navigator.onLine?'error':'offline', err.code+': '+err.message);
+      setSyncStatus('error',(err.code?err.code+' — ':'')+err.message);
     }
-  );
-
-  // Listen for meta changes (users, clients, settings, templates)
-  if(_metaUnsubscribe){_metaUnsubscribe();_metaUnsubscribe=null;}
-  _metaUnsubscribe=window._fbOnSnapshot(
-    window._fbDoc(window._db,'ct_meta','app_data'),
-    (snap)=>{
-      if(!snap.exists()) return;
-      const data=snap.data();
-      // Only apply if remote is newer than local
-      const localTs=parseInt(localStorage.getItem('ct_meta_ts')||'0');
-      if(data.updatedAt&&data.updatedAt>localTs){
-        if(data.users) saveUsers(data.users);
-        if(data.clients) saveClients(data.clients);
-        if(data.settings) localStorage.setItem(SETTINGS_KEY,JSON.stringify(data.settings));
-        if(data.templates) localStorage.setItem(TEMPLATES_KEY,JSON.stringify(data.templates));
-        localStorage.setItem('ct_meta_ts',String(data.updatedAt));
-        updateClientUI();
-        renderClientSwitcher();
-      }
-    },
-    (err)=>console.error('Meta listener error:',err)
   );
 }
 

@@ -1098,6 +1098,12 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <button class="rtab" id="rtab-status" onclick="switchReportTab('status')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
       📊 By Status
     </button>
+    <button class="rtab" id="rtab-failed" onclick="switchReportTab('failed')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
+      ✗ Failed
+    </button>
+    <button class="rtab" id="rtab-overdue" onclick="switchReportTab('overdue')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
+      ⚠ Overdue
+    </button>
     <button class="rtab" id="rtab-templates" onclick="switchReportTab('templates')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
       ✉️ Email Templates
     </button>
@@ -2160,6 +2166,92 @@ function getTemplates(){
 }
 function saveTemplates(t){localStorage.setItem(TEMPLATES_KEY,JSON.stringify(t));if(window._firebaseReady) syncToFirebase();}
 
+function renderDeviceListReport(type){
+  const el=document.getElementById('reports-content');
+  if(!el) return;
+  const isFailed=type==='failed';
+  const colour=isFailed?'var(--red)':'#e67e22';
+  const bg=isFailed?'var(--red-bg)':'#fef6e6';
+  const border=isFailed?'rgba(184,50,50,.15)':'rgba(230,126,34,.2)';
+  const title=isFailed?'Failed Devices':'Overdue Devices';
+  const icon=isFailed?'✗':'⚠';
+
+  const list=devices.filter(d=>getStatus(d)===type);
+  // Group by suburb
+  const bySuburb={};
+  list.forEach(d=>{
+    if(!bySuburb[d.suburb]) bySuburb[d.suburb]=[];
+    bySuburb[d.suburb].push(d);
+  });
+  const suburbs=Object.keys(bySuburb).sort();
+
+  const copyText=()=>{
+    const lines=[title.toUpperCase()+' — '+new Date().toLocaleDateString(),'='+'='.repeat(49),''];
+    suburbs.forEach(sub=>{
+      lines.push(sub+' ('+bySuburb[sub].length+')');
+      lines.push('-'.repeat(40));
+      bySuburb[sub].forEach(d=>{
+        const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
+        lines.push('  Serial: '+(d.serial||'—')+' | '+d.make+' '+d.model+' '+d.size+'mm');
+        lines.push('  Location: '+d.location);
+        if(isFailed&&d.testDate){
+          const[y,m,day]=d.testDate.split('-');
+          lines.push('  Failed: '+day+'/'+m+'/'+y+(lastLog&&lastLog.notes?' — '+lastLog.notes:''));
+        } else {
+          lines.push('  Scheduled: '+(d.scheduledMonth||'—'));
+        }
+        lines.push('');
+      });
+    });
+    navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('Copied to clipboard!'));
+  };
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:10px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:${colour}">${icon} ${title}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${list.length} device${list.length!==1?'s':''} across ${suburbs.length} suburb${suburbs.length!==1?'s':''}</div>
+      </div>
+      <button onclick="(${copyText.toString()})()" style="font-family:var(--sans);padding:8px 14px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0">
+        📋 Copy list
+      </button>
+    </div>
+    ${list.length===0
+      ?`<div style="text-align:center;padding:3rem 1rem;color:var(--text3)">
+          <div style="font-size:2rem;margin-bottom:0.5rem">${isFailed?'✓':'✓'}</div>
+          <div style="font-size:14px;font-weight:500">No ${type} devices</div>
+        </div>`
+      :suburbs.map(sub=>`
+        <div style="margin-bottom:1rem">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${colour};margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+            <span>${sub}</span>
+            <span style="font-size:10px;background:${bg};padding:2px 8px;border-radius:10px;border:1px solid ${border}">${bySuburb[sub].length}</span>
+          </div>
+          ${bySuburb[sub].map(d=>{
+            const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
+            const dateStr=d.testDate?(()=>{const[y,m,day]=d.testDate.split('-');return day+'/'+m+'/'+y;})():'—';
+            return`<div onclick="closeReports();openDevice(${d.id})" style="background:${bg};border:1px solid ${border};border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;active:opacity:.8">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                <div style="min-width:0">
+                  <div style="font-size:13px;font-weight:600;color:var(--text)">${d.make} ${d.model} <span style="font-weight:400;color:var(--text2)">${d.size}mm</span></div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.location}</div>
+                  ${d.serial?`<div style="font-size:11px;color:var(--text3);margin-top:1px;font-family:var(--mono)">S/N: ${d.serial}</div>`:''}
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  ${isFailed
+                    ?`<div style="font-size:11px;color:${colour};font-weight:600">Failed</div><div style="font-size:11px;color:var(--text3)">${dateStr}</div>`
+                    :`<div style="font-size:11px;color:${colour};font-weight:600">Overdue</div><div style="font-size:11px;color:var(--text3)">${d.scheduledMonth||'—'}</div>`
+                  }
+                </div>
+              </div>
+              ${isFailed&&lastLog&&lastLog.notes?`<div style="margin-top:6px;font-size:11px;color:var(--text2);background:rgba(0,0,0,.04);padding:5px 8px;border-radius:6px;font-style:italic">${lastLog.notes.slice(0,100)}${lastLog.notes.length>100?'…':''}</div>`:''}
+            </div>`;
+          }).join('')}
+        </div>`
+      ).join('')
+    }`;
+}
+
 function renderTemplatesTab(){
   const el=document.getElementById('reports-content');
   const templates=getTemplates();
@@ -2334,7 +2426,7 @@ function closeReports(){
 
 function switchReportTab(tab){
   currentReportTab=tab;
-  ['suburb','status','templates'].forEach(t=>{
+  ['suburb','status','failed','overdue','templates'].forEach(t=>{
     const btn=document.getElementById('rtab-'+t);
     if(!btn) return;
     if(t===tab){
@@ -2356,6 +2448,8 @@ function renderReport(tab){
   const el=document.getElementById('reports-content');
   if(!el) return;
   if(tab==='templates'){renderTemplatesTab();return;}
+  if(tab==='failed'){renderDeviceListReport('failed');return;}
+  if(tab==='overdue'){renderDeviceListReport('overdue');return;}
   const showDecom=getSetting('showDecommissioned',true);
   const activeDevices=devices.filter(d=>showDecom||getStatus(d)!=='decommissioned');
 

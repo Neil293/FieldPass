@@ -1601,6 +1601,7 @@ function forceSyncNow(){
         clients:getClients(),
         settings:getSettings(),
         templates:getTemplates(),
+        savedLocation:getSavedLocation()||null,
         updatedAt:now,
         updatedBy:currentUser?currentUser.username:''
       });
@@ -1712,6 +1713,7 @@ function syncToFirebase(){
         clients: getClients(),
         settings: getSettings(),
         templates: getTemplates(),
+        savedLocation: getSavedLocation()||null,
         updatedAt: Date.now(),
         updatedBy: currentUser?currentUser.username:''
       });
@@ -1762,6 +1764,15 @@ function startFirebaseListener(){
         if(data.clients){localStorage.setItem(CLIENTS_KEY,JSON.stringify(data.clients));}
         if(data.settings){localStorage.setItem(SETTINGS_KEY,JSON.stringify(data.settings));}
         if(data.templates){localStorage.setItem(TEMPLATES_KEY,JSON.stringify(data.templates));}
+        // Sync saved GPS location — so laptop gets phone's location
+        if(data.savedLocation){
+          const local=getSavedLocation();
+          // Only update if remote location is newer
+          if(!local||data.savedLocation.saved>local.saved){
+            localStorage.setItem(SAVED_LOCATION_KEY,JSON.stringify(data.savedLocation));
+            syncSaveLocationBtn();
+          }
+        }
         populateSuburbFilter();
         render();
         renderClientSwitcher();

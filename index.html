@@ -482,6 +482,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <span id="nav-user-info" style="font-size:12px;opacity:.8;white-space:nowrap"></span>
     <button class="nbtn" id="nav-users-btn" onclick="openSettings('users')" style="display:none">&#9881; Settings</button>
     <button class="nbtn" onclick="openMapView()" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5.5" r="3" stroke="white" stroke-width="1.3"/><path d="M6.5 12C6.5 12 2 8.5 2 5.5a4.5 4.5 0 019 0C11 8.5 6.5 12 6.5 12z" stroke="white" stroke-width="1.3" fill="none"/></svg> Map</button>
+    <button class="nbtn" onclick="openReports()" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1" width="10" height="11" rx="1.5" stroke="white" stroke-width="1.3"/><path d="M4 4.5h5M4 6.5h5M4 8.5h3" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg> Reports</button>
     <button class="nbtn" id="nav-reset-btn" onclick="resetToSeedData()" style="display:none;background:rgba(184,50,50,.25);border-color:rgba(255,255,255,.3)" title="Wipe all recorded test results and restore the original 570 imported devices">&#8635; Restore default devices</button>
     <button class="nbtn" id="nav-export-btn" onclick="exportCSV()">&#8595; Export CSV</button>
     <button class="nbtn nbtn-p" id="nav-add-btn" onclick="openAdd()">+ Add device</button>
@@ -1124,6 +1125,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   <div style="background:var(--accent);display:flex;gap:0;border-top:1px solid rgba(255,255,255,.15);flex-shrink:0;overflow-x:auto;scrollbar-width:none">
     <button class="rtab active" id="rtab-suburb" onclick="switchReportTab('suburb')" style="font-family:var(--sans);font-size:13px;font-weight:600;padding:10px 16px;border:none;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;border-bottom:2px solid #fff;white-space:nowrap">
       📍 By Suburb
+    </button>
+    <button class="rtab" id="rtab-monthly" onclick="switchReportTab('monthly')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
+      📅 By Month
     </button>
     <button class="rtab" id="rtab-status" onclick="switchReportTab('status')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
       📊 By Status
@@ -2374,6 +2378,82 @@ function renderDeviceListReport(type){
     }`;
 }
 
+function renderMonthlyReport(){
+  const el=document.getElementById('reports-content');
+  if(!el) return;
+
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const currentMonth=new Date().getMonth(); // 0-based
+
+  // Build per-month stats
+  const monthData=MONTHS.map((month,idx)=>{
+    const scheduled=devices.filter(d=>d.scheduledMonth===month&&getStatus(d)!=='decommissioned');
+    const complete=scheduled.filter(d=>getStatus(d)==='complete'||getStatus(d)==='repaired');
+    const failed=scheduled.filter(d=>getStatus(d)==='failed');
+    const overdue=scheduled.filter(d=>getStatus(d)==='overdue');
+    const remaining=scheduled.filter(d=>!['complete','repaired','failed'].includes(getStatus(d)));
+    const pct=scheduled.length?Math.round((complete.length/scheduled.length)*100):0;
+    const isPast=idx<currentMonth;
+    const isCurrent=idx===currentMonth;
+    return{month,idx,scheduled,complete,failed,overdue,remaining,pct,isPast,isCurrent};
+  });
+
+  const totalDevices=devices.filter(d=>getStatus(d)!=='decommissioned').length;
+  const totalComplete=devices.filter(d=>['complete','repaired'].includes(getStatus(d))).length;
+  const yearPct=totalDevices?Math.round((totalComplete/totalDevices)*100):0;
+
+  el.innerHTML=`
+    <!-- Year summary -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1.25rem">
+      <div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center;border:1px solid var(--border2)">
+        <div style="font-size:22px;font-weight:700;color:var(--accent)">${totalDevices}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Total</div>
+      </div>
+      <div style="background:var(--green-bg);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(26,102,54,.15)">
+        <div style="font-size:22px;font-weight:700;color:var(--green)">${totalComplete}</div>
+        <div style="font-size:11px;color:var(--green);margin-top:2px">Complete</div>
+      </div>
+      <div style="background:var(--accent-light);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(26,77,110,.15)">
+        <div style="font-size:22px;font-weight:700;color:var(--accent)">${yearPct}%</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:2px">Year total</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">All 12 months</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${monthData.map(m=>{
+        const hasIssue=m.overdue.length>0||m.failed.length>0;
+        const borderCol=m.isCurrent?'rgba(26,77,110,.3)':hasIssue?'rgba(184,50,50,.2)':'var(--border2)';
+        const bgCol=m.isCurrent?'var(--accent-light)':'var(--surface)';
+        const pctCol=m.pct===100?'var(--green)':m.pct>50?'#e67e22':'var(--text2)';
+        return`<div style="background:${bgCol};border-radius:12px;border:1px solid ${borderCol};padding:12px 14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:14px;font-weight:${m.isCurrent?'700':'600'};color:${m.isCurrent?'var(--accent)':'var(--text)'}">${m.month}</div>
+              ${m.isCurrent?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--accent);color:#fff">NOW</span>':''}
+            </div>
+            <div style="text-align:right">
+              <span style="font-size:18px;font-weight:700;color:${pctCol}">${m.pct}%</span>
+              <span style="font-size:11px;color:var(--text3);margin-left:4px">${m.complete.length}/${m.scheduled.length}</span>
+            </div>
+          </div>
+          <!-- Progress bar -->
+          <div style="height:5px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden;margin-bottom:6px">
+            <div style="height:100%;width:${m.pct}%;background:${m.pct===100?'var(--green)':m.pct>50?'#e67e22':'var(--accent)'};border-radius:3px;transition:width .4s"></div>
+          </div>
+          <!-- Stats row -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text3)">${m.scheduled.length} scheduled</span>
+            ${m.complete.length?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ ${m.complete.length} done</span>`:''}
+            ${m.remaining.length&&!m.isPast?`<span style="font-size:11px;color:var(--text2)">${m.remaining.length} remaining</span>`:''}
+            ${m.overdue.length?`<span style="font-size:11px;color:var(--red);font-weight:600">⚠ ${m.overdue.length} overdue</span>`:''}
+            ${m.failed.length?`<span style="font-size:11px;color:var(--red);font-weight:500">✗ ${m.failed.length} failed</span>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
 function renderTemplatesTab(){
   const el=document.getElementById('reports-content');
   const templates=getTemplates();
@@ -2548,7 +2628,7 @@ function closeReports(){
 
 function switchReportTab(tab){
   currentReportTab=tab;
-  ['suburb','status','failed','overdue','templates'].forEach(t=>{
+  ['suburb','monthly','status','failed','overdue','templates'].forEach(t=>{
     const btn=document.getElementById('rtab-'+t);
     if(!btn) return;
     if(t===tab){
@@ -2572,6 +2652,7 @@ function renderReport(tab){
   if(tab==='templates'){renderTemplatesTab();return;}
   if(tab==='failed'){renderDeviceListReport('failed');return;}
   if(tab==='overdue'){renderDeviceListReport('overdue');return;}
+  if(tab==='monthly'){renderMonthlyReport();return;}
   const showDecom=getSetting('showDecommissioned',true);
   const activeDevices=devices.filter(d=>showDecom||getStatus(d)!=='decommissioned');
 

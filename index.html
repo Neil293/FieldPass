@@ -324,7 +324,8 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     padding:1rem 1rem max(5rem, env(safe-area-inset-bottom));
   }
   #settings-pane-users,
-  #settings-pane-clients{
+  #settings-pane-clients,
+  #settings-pane-settings{
     padding:1rem 1rem max(5rem, env(safe-area-inset-bottom)) !important;
     max-height:none !important;
   }
@@ -904,7 +905,10 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           🗂 Clients
         </button>
         <button class="stab" id="stab-data" onclick="switchSettingsTab('data')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);white-space:nowrap;flex-shrink:0">
-          ⚙️ Data
+          💾 Data
+        </button>
+        <button class="stab" id="stab-settings" onclick="switchSettingsTab('settings')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);white-space:nowrap;flex-shrink:0">
+          ⚙️ Settings
         </button>
       </div>
     </div>
@@ -966,32 +970,6 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           <div id="sync-interval-status" style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center"></div>
         </div>
 
-        <!-- Settings -->
-        <div style="border-top:1px solid var(--border2);padding-top:1rem">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:10px">Settings</div>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer;margin-bottom:8px">
-            <input type="checkbox" id="setting-prompt-missing" onchange="saveSetting('promptMissing',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
-            <div>
-              <div style="font-size:14px;font-weight:500;color:var(--text)">Prompt for missing data</div>
-              <div style="font-size:12px;color:var(--text3);margin-top:2px">Show a popup to fill in incomplete device details when opening a device</div>
-            </div>
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
-            <input type="checkbox" id="setting-show-decommissioned" onchange="saveSetting('showDecommissioned',this.checked);render()" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
-            <div>
-              <div style="font-size:14px;font-weight:500;color:var(--text)">Show decommissioned devices</div>
-              <div style="font-size:12px;color:var(--text3);margin-top:2px">Include decommissioned devices in the device list</div>
-            </div>
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer;margin-top:8px">
-            <input type="checkbox" id="setting-follow-backflow-url" onchange="saveSetting('followBackflowUrl',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
-            <div>
-              <div style="font-size:14px;font-weight:500;color:var(--text)">Follow Backflow ID link after recording</div>
-              <div style="font-size:12px;color:var(--text3);margin-top:2px">Automatically open the Backflow ID URL when you tap Pass, Fail, Repaired or Decommissioned</div>
-            </div>
-          </label>
-        </div>
-
         <!-- Backup -->
         <div style="border-top:1px solid var(--border2);padding-top:1rem">
           <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text2)">📤 Backup data</div>
@@ -1028,6 +1006,45 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
             Sign out
           </button>
         </div>
+
+      </div>
+    </div>
+
+    <!-- Settings pane -->
+    <div id="settings-pane-settings" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1.25rem 2rem;flex:1">
+      <div style="display:flex;flex-direction:column;gap:8px">
+
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:2px">Device list</div>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-prompt-missing" onchange="saveSetting('promptMissing',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Prompt for missing data</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Show a popup to fill in incomplete device details when opening a device</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-show-decommissioned" onchange="saveSetting('showDecommissioned',this.checked);render()" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Show decommissioned devices</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Include decommissioned devices in the device list</div>
+          </div>
+        </label>
+
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-top:8px;margin-bottom:2px">Recording</div>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-follow-backflow-url" onchange="saveSetting('followBackflowUrl',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Follow Backflow ID link after recording</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Automatically open the Backflow ID URL when you tap Pass, Fail, Repaired or Decommissioned</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-auto-update-gps" onchange="saveSetting('autoUpdateGps',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Update saved location when recording</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Automatically save your current GPS position each time you record Pass, Fail, Repaired or Decommissioned</div>
+          </div>
+        </label>
 
       </div>
     </div>
@@ -1215,7 +1232,7 @@ function getClients(){
 }
 function saveClients(clients){
   localStorage.setItem(CLIENTS_KEY,JSON.stringify(clients));
-  maybeSyncToFirebase();
+  // No sync here — will be included in next save() call
 }
 function getActiveClientId(){
   return localStorage.getItem(ACTIVE_CLIENT_KEY)||SCC_CLIENT_ID;
@@ -1575,9 +1592,6 @@ function forceSyncNow(){
     },20000);
     try{
       step('Step 1/3: Connecting to Firebase…');
-      // Test connection with a small ping first
-      const pingRef=window._fbDoc(db,'ct_sync','_ping');
-      await window._fbSetDoc(pingRef,{ts:Date.now()});
       step('Step 2/3: Uploading data…');
       const now=Date.now();
       await window._fbSetDoc(window._fbDoc(db,'ct_sync','main'),{
@@ -1592,12 +1606,10 @@ function forceSyncNow(){
       });
       window._lastSyncTs=now;
       step('Step 3/3: Verifying…');
-      // Read back to confirm it was written
-      const check=await window._fbGetDocs(window._fbCollection(db,'ct_sync'));
       clearTimeout(watchdog);
       setSyncStatus('synced');
       showToast('✓ Sync complete — '+devices.length+' devices pushed to cloud');
-      startFirebaseListener();
+      if(!_firestoreUnsubscribe) startFirebaseListener();
     }catch(err){
       clearTimeout(watchdog);
       const msg=(err.code||'')+' '+(err.message||'');
@@ -1711,7 +1723,7 @@ function syncToFirebase(){
       console.error('Firebase sync error:',err);
       setSyncStatus('error',(err.code?err.code+' — ':'')+( err.message||'unknown error'));
     }
-  },2000); // 2s debounce — rapid saves only trigger 1 write
+  },5000); // 5s debounce — rapid saves only trigger 1 write
 }
 
 function startFirebaseListener(){
@@ -2447,7 +2459,7 @@ function getTemplates(){
   }catch(e){}
   return [DEFAULT_TEMPLATE];
 }
-function saveTemplates(t){localStorage.setItem(TEMPLATES_KEY,JSON.stringify(t));maybeSyncToFirebase();}
+function saveTemplates(t){localStorage.setItem(TEMPLATES_KEY,JSON.stringify(t));}
 
 function renderDeviceListReport(type){
   const el=document.getElementById('reports-content');
@@ -3066,6 +3078,22 @@ function saveTest(){
     if(!last||last.date!==entry.date||last.result!==entry.result){d.testLog.push(entry);}
   }
   save();closeModal();populateSuburbFilter();render();showToast('Saved.');
+  // Auto-update saved GPS location if setting enabled
+  const isTestActionForGps=['Pass','Fail','Repaired','Decommissioned'].includes(d.testResult);
+  if(isTestActionForGps&&getSetting('autoUpdateGps',false)){
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        pos=>{
+          const loc={lat:pos.coords.latitude,lng:pos.coords.longitude,saved:Date.now()};
+          localStorage.setItem(SAVED_LOCATION_KEY,JSON.stringify(loc));
+          syncSaveLocationBtn();
+          console.log('GPS auto-updated: '+loc.lat.toFixed(4)+', '+loc.lng.toFixed(4));
+        },
+        err=>console.warn('Auto GPS update failed:',err.message),
+        {enableHighAccuracy:true,timeout:8000}
+      );
+    }
+  }
   // Follow backflowId URL if setting enabled and result was a test action
   const bfId=d.backflowId&&d.backflowId.trim();
   const testResult=d.testResult;
@@ -3094,7 +3122,8 @@ const WIZ_FIELDS=[
 const SETTINGS_KEY='ct_settings_v1';
 function getSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY))||{};}catch(e){return{};}}
 function getSetting(key,def=true){const s=getSettings();return key in s?s[key]:def;}
-function saveSetting(key,val){const s=getSettings();s[key]=val;localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));maybeSyncToFirebase();}
+function saveSetting(key,val){const s=getSettings();s[key]=val;localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
+
 
 function loadSettingsCheckboxes(){
   const el=document.getElementById('setting-prompt-missing');
@@ -3103,6 +3132,8 @@ function loadSettingsCheckboxes(){
   if(el2) el2.checked=getSetting('showDecommissioned',true);
   const el3=document.getElementById('setting-follow-backflow-url');
   if(el3) el3.checked=getSetting('followBackflowUrl',false);
+  const el4=document.getElementById('setting-auto-update-gps');
+  if(el4) el4.checked=getSetting('autoUpdateGps',false);
   syncIntervalUI();
 }
 
@@ -3593,7 +3624,7 @@ function getUsers(){
 
 function saveUsers(users){
   localStorage.setItem(USERS_KEY,JSON.stringify(users));
-  maybeSyncToFirebase();
+  // No sync here — included in next save() or forceSyncNow()
 }
 
 // ── Permissions system ─────────────────────────────────
@@ -4145,8 +4176,8 @@ function deleteClient(id){
 
 function switchSettingsTab(tab){
   if(tab==='client') tab='clients';
-  if(tab==='backup') tab='data'; // redirect old backup tab to data
-  ['users','clients','data'].forEach(t=>{
+  if(tab==='backup') tab='data';
+  ['users','clients','data','settings'].forEach(t=>{
     const pane=document.getElementById('settings-pane-'+t);
     if(pane) pane.style.display=t===tab?'block':'none';
     const btn=document.getElementById('stab-'+t);

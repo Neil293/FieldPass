@@ -2424,8 +2424,15 @@ function renderMonthlyReport(){
       ${monthData.map(m=>{
         const hasIssue=m.overdue.length>0||m.failed.length>0;
         const borderCol=m.isCurrent?'rgba(26,77,110,.3)':hasIssue?'rgba(184,50,50,.2)':'var(--border2)';
-        const bgCol=m.isCurrent?'var(--accent-light)':'var(--surface)';
+        const bgCol=m.isCurrent?'var(--accent-light)':m.scheduled.length===0?'transparent':'var(--surface)';
+        const opacity=m.scheduled.length===0?'0.45':'1';
         const pctCol=m.pct===100?'var(--green)':m.pct>50?'#e67e22':'var(--text2)';
+        if(m.scheduled.length===0){
+          return`<div style="opacity:${opacity};background:transparent;border-radius:8px;border:1px dashed var(--border);padding:7px 14px;display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:13px;font-weight:500;color:var(--text3)">${m.month}</div>
+            <div style="font-size:11px;color:var(--text3)">No devices scheduled</div>
+          </div>`;
+        }
         return`<div style="background:${bgCol};border-radius:12px;border:1px solid ${borderCol};padding:12px 14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="display:flex;align-items:center;gap:8px">

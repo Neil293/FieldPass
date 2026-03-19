@@ -2214,7 +2214,7 @@ function deviceRow(d,hideSuburb){
     <td><span class="cmplx">${hideSuburb?'':d.suburb}</span>${distLabel}</td>
     <td>${d.size?d.size+'mm':'-'}</td>
     <td><span class="mono">${d.serial||'-'}</span></td>
-    <td><span class="mono" style="color:${d.backflowId?'var(--accent)':'var(--text3)'}">${d.backflowId||'—'}</span></td>
+    <td><span class="mono" style="color:${d.backflowId?'var(--accent)':'var(--text3);font-weight:400'}">${d.backflowId?extractBfCode(d.backflowId):'—'}</span></td>
     <td><span class="loc-cell" title="${d.location}">${d.location}</span></td>
     <td>${d.scheduledMonth?`<span class="sched-month">${d.scheduledMonth}</span>`:'-'}</td>
     <td style="font-size:12px;color:var(--text2)">

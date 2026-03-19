@@ -2057,9 +2057,9 @@ function extractBfCode(bfId){
       }
     }catch(e){}
   }
-  // Format: insert a dash after every 4 chars if it looks like a raw alphanumeric code
-  if(/^[A-Z0-9]{6,}$/i.test(code)&&!code.includes('-')){
-    code=code.match(/.{1,4}/g).join('-');
+  // Format: insert a single dash after the first 4 chars only (e.g. YCEMJC4BN → YCEM-JC4BN)
+  if(/^[A-Z0-9]{5,}$/i.test(code)&&!code.includes('-')){
+    code=code.slice(0,4)+'-'+code.slice(4);
   }
   return code.toUpperCase();
 }

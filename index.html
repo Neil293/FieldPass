@@ -2134,15 +2134,16 @@ function render(){
   }
   tbody.innerHTML=html;
 
-  const total=devices.length;
-  const overdue=devices.filter(d=>getStatus(d)==='overdue').length;
-  const due=devices.filter(d=>getStatus(d)==='due').length;
-  const complete=devices.filter(d=>getStatus(d)==='complete'||getStatus(d)==='repaired').length;
+  const activeDevices=devices.filter(d=>getStatus(d)!=='decommissioned');
+  const total=activeDevices.length;
+  const overdue=activeDevices.filter(d=>getStatus(d)==='overdue').length;
+  const due=activeDevices.filter(d=>getStatus(d)==='due').length;
+  const complete=activeDevices.filter(d=>getStatus(d)==='complete'||getStatus(d)==='repaired').length;
   const pct=total?Math.round((complete/total)*100):0;
 
   if(fsm){
     // Month-specific metrics
-    const monthDevices=devices.filter(d=>d.scheduledMonth===fsm);
+    const monthDevices=devices.filter(d=>d.scheduledMonth===fsm&&getStatus(d)!=='decommissioned');
     const monthTotal=monthDevices.length;
     const monthTested=monthDevices.filter(d=>getStatus(d)==='complete').length;
     const monthRemaining=monthTotal-monthTested;

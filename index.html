@@ -2697,6 +2697,8 @@ function openBfidUrl(){
   const url=val.startsWith('http')?val:'https://www.google.com/search?q='+encodeURIComponent(val);
   window.open(url,'_blank');
 }
+
+function markDecommissioned(){
   ctConfirm(
     'Mark this device as decommissioned? This will record it as no longer in use.',
     ()=>{

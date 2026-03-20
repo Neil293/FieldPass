@@ -910,6 +910,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         <button class="stab" id="stab-settings" onclick="switchSettingsTab('settings')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);white-space:nowrap;flex-shrink:0">
           ⚙️ Settings
         </button>
+        <button class="stab" id="stab-developer" onclick="switchSettingsTab('developer')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:rgba(126,184,247,.8);white-space:nowrap;flex-shrink:0;display:none">
+          🛠 Developer
+        </button>
       </div>
     </div>
 
@@ -951,11 +954,11 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           Force sync — push all data to cloud
         </button>
 
-        <!-- Firebase diagnostics -->
-        <button onclick="firebaseDiagnostic()" style="font-family:var(--sans);width:100%;padding:11px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;margin-top:4px">
+        <!-- Firebase diagnostics — shown only when feature flag enabled -->
+        ${flagEnabled('firebaseDiagnostic')?`<button onclick="firebaseDiagnostic()" style="font-family:var(--sans);width:100%;padding:11px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;margin-top:4px">
           🔍 Test Firebase connection
         </button>
-        <div id="firebase-diag-result" style="display:none;margin-top:6px;padding:10px 12px;border-radius:var(--r);font-size:12px;font-family:var(--mono);line-height:1.7;background:var(--surface2);border:1px solid var(--border2);white-space:pre-wrap;word-break:break-all"></div>
+        <div id="firebase-diag-result" style="display:none;margin-top:6px;padding:10px 12px;border-radius:var(--r);font-size:12px;font-family:var(--mono);line-height:1.7;background:var(--surface2);border:1px solid var(--border2);white-space:pre-wrap;word-break:break-all"></div>`:''}
 
         <!-- Sync interval — admin only -->
         <div id="sync-interval-section" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:12px;margin-top:2px">
@@ -1046,6 +1049,45 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           </div>
         </label>
 
+      </div>
+    </div>
+
+    <!-- Developer pane — only visible when logged in as dev -->
+    <div id="settings-pane-developer" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1.25rem 2rem;flex:1">
+      <div style="background:#1a1a2e;color:#7eb8f7;border-radius:var(--r);padding:10px 14px;font-size:12px;font-weight:600;margin-bottom:1rem;letter-spacing:.03em">🛠 Developer Panel — FieldPass Internal</div>
+
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Feature Flags</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5">Toggle features on/off for all users. Changes sync to Firebase immediately.</div>
+      <div id="feature-flags-list" style="display:flex;flex-direction:column;gap:8px"></div>
+
+      <div style="border-top:1px solid var(--border2);padding-top:1rem;margin-top:1rem">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">User Impersonation</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5">Log in as any user to see exactly what they see. An audit entry is recorded and a banner is shown.</div>
+        <div id="impersonation-user-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <div style="border-top:1px solid var(--border2);padding-top:1rem;margin-top:1rem">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Audit Log</div>
+        <div id="impersonation-audit-log" style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.8;max-height:150px;overflow-y:auto;background:var(--surface2);border-radius:var(--r);padding:8px 10px;border:1px solid var(--border2)">No entries this session.</div>
+      </div>
+
+      <div style="border-top:1px solid var(--border2);padding-top:1rem;margin-top:1rem">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Diagnostics</div>
+        <button onclick="firebaseDiagnostic()" style="font-family:var(--sans);width:100%;padding:11px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;margin-bottom:8px">
+          🔍 Test Firebase connection
+        </button>
+        <div id="firebase-diag-result" style="display:none;margin-top:6px;padding:10px 12px;border-radius:var(--r);font-size:12px;font-family:var(--mono);line-height:1.7;background:var(--surface2);border:1px solid var(--border2);white-space:pre-wrap;word-break:break-all"></div>
+      </div>
+
+      <div style="border-top:1px solid var(--border2);padding-top:1rem;margin-top:1rem">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Build info</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.8">
+          <div>App: <strong id="dev-app-name">—</strong></div>
+          <div>Storage key: <code style="font-family:var(--mono);background:var(--surface2);padding:1px 5px;border-radius:4px">scc_backflow_v7</code></div>
+          <div>Firebase project: <code style="font-family:var(--mono);background:var(--surface2);padding:1px 5px;border-radius:4px">complytrack-6ac7e</code></div>
+          <div>Devices loaded: <strong id="dev-device-count">—</strong></div>
+          <div>Last sync: <strong id="dev-last-sync">—</strong></div>
+        </div>
       </div>
     </div>
 
@@ -3845,6 +3887,37 @@ function saveUsers(users){
 }
 
 // ── Permissions system ─────────────────────────────────
+// ── Developer account ───────────────────────────────────
+const DEV_USERNAME='dev';
+const DEV_PASSWORD_LEGACY=hashPassLegacy('dev123'); // fallback during migration
+const FEATURE_FLAGS_KEY='ct_feature_flags_v1';
+
+const DEFAULT_FLAGS={
+  firebaseDiagnostic: true,
+  photoCapture:       false, // not built yet
+  digitalSignature:   false, // not built yet
+  pdfCertificates:    false, // not built yet
+  swipeToRecord:      false, // not built yet
+  darkMode:           false, // not built yet
+};
+
+function getFeatureFlags(){
+  try{const s=localStorage.getItem(FEATURE_FLAGS_KEY);return s?{...DEFAULT_FLAGS,...JSON.parse(s)}:{...DEFAULT_FLAGS};}
+  catch(e){return{...DEFAULT_FLAGS};}
+}
+function saveFeatureFlags(flags){
+  localStorage.setItem(FEATURE_FLAGS_KEY,JSON.stringify(flags));
+  maybeSyncToFirebase();
+}
+function flagEnabled(key){
+  if(isDev()) return true; // dev always sees everything
+  return getFeatureFlags()[key]===true;
+}
+
+function isDev(){
+  return !!(currentUser&&currentUser.username===DEV_USERNAME);
+}
+
 const PRESETS={
   tester:  {recordTests:true, editDevices:false,addDevices:false,viewHistory:false,exportCSV:false,manageUsers:false},
   supervisor:{recordTests:true,editDevices:true, addDevices:false,viewHistory:true, exportCSV:true, manageUsers:false},
@@ -3854,15 +3927,15 @@ const PERM_KEYS=['recordTests','editDevices','addDevices','viewHistory','exportC
 
 function can(perm){
   if(!currentUser) return false;
-  // New format: permissions object
+  if(isDev()) return true; // developer has all permissions
   if(currentUser.permissions) return !!currentUser.permissions[perm];
-  // Legacy format: role string
   if(currentUser.role==='admin') return true;
   if(currentUser.role==='supervisor') return ['recordTests','editDevices','viewHistory','exportCSV'].includes(perm);
-  return perm==='recordTests'; // tester
+  return perm==='recordTests';
 }
 function isAdmin(){
   if(!currentUser) return false;
+  if(isDev()) return true;
   if(currentUser.permissions) return !!currentUser.permissions.manageUsers;
   return currentUser.role==='admin';
 }
@@ -3880,11 +3953,11 @@ function getNewUserPerms(){
   return p;
 }
 
-function permLabel(p){
-  const labels=[];
-  if(p.manageUsers)return '<span class="role-badge role-admin">Admin</span>';
-  if(p.editDevices&&p.addDevices&&p.viewHistory&&p.exportCSV)return '<span class="role-badge role-admin" style="background:#e8f4ee;color:#1a6636">Supervisor</span>';
-  if(p.recordTests&&!p.editDevices)return '<span class="role-badge role-tester">Tester</span>';
+function permLabel(p,username){
+  if(username===DEV_USERNAME) return '<span class="role-badge" style="background:#1a1a2e;color:#7eb8f7">Developer</span>';
+  if(p&&p.manageUsers)return '<span class="role-badge role-admin">Admin</span>';
+  if(p&&p.editDevices&&p.addDevices&&p.viewHistory&&p.exportCSV)return '<span class="role-badge role-admin" style="background:#e8f4ee;color:#1a6636">Supervisor</span>';
+  if(p&&p.recordTests&&!p.editDevices)return '<span class="role-badge role-tester">Tester</span>';
   return '<span class="role-badge" style="background:var(--surface2);color:var(--text2)">Custom</span>';
 }
 
@@ -3916,27 +3989,41 @@ function resetAdminAccount(e){
 }
 
 function initUsers(){
-  // If this is a fresh v7 load (no device data yet), also reset users
-  // so stale hashed passwords from old versions don't block login
   const users=getUsers();
   if(!users.length){
     saveUsers([{username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:PRESETS.admin}]);
-    return;
   }
   // Migrate old role-based users to permissions
+  const current=getUsers();
   let changed=false;
-  users.forEach(u=>{
+  current.forEach(u=>{
     if(!u.permissions){
       u.permissions=u.role==='admin'?PRESETS.admin:PRESETS.tester;
       changed=true;
     }
   });
-  if(changed)saveUsers(users);
+  if(changed)saveUsers(current);
+  // Ensure dev account always exists and can't be modified by others
+  const allUsers=getUsers();
+  const hasDev=allUsers.some(u=>u.username===DEV_USERNAME);
+  if(!hasDev){
+    allUsers.push({
+      username:DEV_USERNAME,
+      password:hashPass('dev123'),
+      name:'Developer',
+      company:'FieldPass',
+      permissions:{recordTests:true,editDevices:true,addDevices:true,viewHistory:true,exportCSV:true,manageUsers:true,developer:true},
+      isDeveloper:true
+    });
+    saveUsers(allUsers);
+  }
   // Safety: ensure at least one admin always exists
-  const hasAdmin=users.some(u=>u.permissions&&u.permissions.manageUsers);
+  const final=getUsers().filter(u=>u.username!==DEV_USERNAME);
+  const hasAdmin=final.some(u=>u.permissions&&u.permissions.manageUsers);
   if(!hasAdmin){
-    users.push({username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:PRESETS.admin});
-    saveUsers(users);
+    const a=getUsers();
+    a.push({username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:PRESETS.admin});
+    saveUsers(a);
   }
 }
 
@@ -3980,6 +4067,8 @@ async function doLogin(){
 }
 
 function doLogout(){
+  if(_devUser){currentUser=_devUser;_devUser=null;}
+  hideImpersonationBanner();
   currentUser=null;
   localStorage.removeItem(SESSION_KEY);
   document.getElementById('app').style.display='none';
@@ -4418,7 +4507,7 @@ function deleteClient(id){
 function switchSettingsTab(tab){
   if(tab==='client') tab='clients';
   if(tab==='backup') tab='data';
-  ['users','clients','data','settings'].forEach(t=>{
+  ['users','clients','data','settings','developer'].forEach(t=>{
     const pane=document.getElementById('settings-pane-'+t);
     if(pane) pane.style.display=t===tab?'block':'none';
     const btn=document.getElementById('stab-'+t);
@@ -4428,6 +4517,12 @@ function switchSettingsTab(tab){
       btn.style.fontWeight=t===tab?'600':'500';
     }
   });
+  if(tab==='developer'){
+    // Dev tab uses different active colour
+    const devBtn=document.getElementById('stab-developer');
+    if(devBtn){devBtn.style.borderBottom='2px solid #7eb8f7';devBtn.style.color='#7eb8f7';}
+    renderDeveloperPanel();
+  }
   if(tab==='clients') renderClientsList();
   if(tab==='data'){
     // Reset restore UI when switching to data tab
@@ -4442,12 +4537,140 @@ function switchSettingsTab(tab){
   }
 }
 
+// ── Impersonation ────────────────────────────────────────
+let _devUser=null;          // stores real dev account while impersonating
+let _impersonationLog=[];   // session audit log
+
+function impersonateUser(username){
+  if(!isDev()&&!_devUser){showToast('Developer access required.');return;}
+  const users=getUsers();
+  const target=users.find(u=>u.username===username);
+  if(!target){showToast('User not found.');return;}
+
+  // Save real dev account
+  _devUser=_devUser||currentUser;
+
+  // Switch to target user
+  currentUser=target;
+
+  // Audit entry
+  const entry={ts:new Date().toLocaleTimeString(),action:`Impersonating "${target.name}" (${target.username})`};
+  _impersonationLog.push(entry);
+
+  closeUserMgmt();
+  showApp();
+  showImpersonationBanner();
+  showToast(`👤 Viewing as: ${target.name}`);
+  renderAuditLog();
+}
+
+function stopImpersonation(){
+  if(!_devUser) return;
+  const entry={ts:new Date().toLocaleTimeString(),action:`Stopped impersonating "${currentUser.name}" — returned to dev`};
+  _impersonationLog.push(entry);
+  currentUser=_devUser;
+  _devUser=null;
+  hideImpersonationBanner();
+  showApp();
+  showToast('✓ Returned to developer account');
+}
+
+function showImpersonationBanner(){
+  let banner=document.getElementById('impersonation-banner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='impersonation-banner';
+    document.body.appendChild(banner);
+  }
+  banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#b8370b;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--sans)';
+  banner.innerHTML=`<span>👤 Impersonating: <strong>${currentUser.name}</strong> (${currentUser.username}) — read &amp; write active</span>
+    <button onclick="stopImpersonation()" style="font-family:var(--sans);background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:3px 12px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:700">✕ Return to Dev</button>`;
+  // Push app content down
+  const app=document.getElementById('app');
+  if(app) app.style.paddingTop='32px';
+}
+
+function hideImpersonationBanner(){
+  const banner=document.getElementById('impersonation-banner');
+  if(banner) banner.remove();
+  const app=document.getElementById('app');
+  if(app) app.style.paddingTop='';
+}
+
+function renderAuditLog(){
+  const el=document.getElementById('impersonation-audit-log');
+  if(!el) return;
+  if(!_impersonationLog.length){el.textContent='No entries this session.';return;}
+  el.innerHTML=_impersonationLog.slice().reverse().map(e=>`<div>${e.ts} — ${e.action}</div>`).join('');
+}
+
+function toggleFeatureFlag(key,val){
+  const flags=getFeatureFlags();
+  flags[key]=val;
+  saveFeatureFlags(flags);
+  showToast((val?'✓ Enabled: ':'✗ Disabled: ')+key);
+}
+
+function renderDeveloperPanel(){
+  const flags=getFeatureFlags();
+  const flagMeta={
+    firebaseDiagnostic:{label:'Firebase Diagnostic Tool',    desc:'Show Firebase connection test in Data settings'},
+    photoCapture:      {label:'📸 Photo Capture',             desc:'Take photos when recording a test result — not built yet'},
+    digitalSignature:  {label:'🖊 Digital Signature',         desc:'Client/supervisor sign-off on records — not built yet'},
+    pdfCertificates:   {label:'📄 PDF Certificates',          desc:'Generate PDF compliance certificates — not built yet'},
+    swipeToRecord:     {label:'👆 Swipe to Pass/Fail',        desc:'Swipe cards to record results — not built yet'},
+    darkMode:          {label:'🌙 Dark Mode',                 desc:'Dark colour scheme for field use — not built yet'},
+  };
+  const el=document.getElementById('feature-flags-list');
+  if(el){
+    el.innerHTML=Object.entries(flagMeta).map(([key,meta])=>`
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid ${flags[key]?'rgba(26,26,46,.3)':'var(--border2)'};background:${flags[key]?'#f0f0f8':'var(--surface2)'};cursor:pointer">
+        <input type="checkbox" ${flags[key]?'checked':''} onchange="toggleFeatureFlag('${key}',this.checked)" style="width:18px;height:18px;accent-color:#1a1a2e;flex-shrink:0">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500;color:var(--text)">${meta.label}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${meta.desc}</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${flags[key]?'#1a1a2e':'#e0e0e0'};color:${flags[key]?'#7eb8f7':'#888'}">${flags[key]?'ON':'OFF'}</span>
+      </label>`).join('');
+  }
+  const dc=document.getElementById('dev-device-count');
+  if(dc) dc.textContent=devices.length+' devices';
+  const ls=document.getElementById('dev-last-sync');
+  if(ls) ls.textContent=window._lastSyncTs?new Date(window._lastSyncTs).toLocaleTimeString():'Never this session';
+  const an=document.getElementById('dev-app-name');
+  if(an) an.textContent=APP_NAME;
+
+  // Render impersonation user list
+  const impEl=document.getElementById('impersonation-user-list');
+  if(impEl){
+    const users=getUsers().filter(u=>u.username!==DEV_USERNAME);
+    if(!users.length){impEl.innerHTML='<div style="font-size:12px;color:var(--text3)">No users found.</div>';return;}
+    impEl.innerHTML=users.map(u=>{
+      const isActive=_devUser&&currentUser.username===u.username;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);border:1px solid ${isActive?'rgba(184,55,11,.3)':'var(--border2)'};background:${isActive?'#fff3ee':'var(--surface)'}">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${u.name}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${u.username}</div>
+        </div>
+        ${isActive
+          ?`<span style="font-size:11px;color:#b8370b;font-weight:600">● Active</span>`
+          :`<button onclick="impersonateUser('${u.username}')" style="font-family:var(--sans);font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid rgba(26,26,46,.3);background:#1a1a2e;color:#7eb8f7;cursor:pointer;font-weight:600">Login as</button>`
+        }
+      </div>`;
+    }).join('');
+  }
+  renderAuditLog();
+}
+
 function openSettings(tab){
   applyPreset();
   renderUserTable();
   loadClientInfoFields();
   renderClientsList();
   loadSettingsCheckboxes();
+  // Show developer tab only for dev account
+  const devTab=document.getElementById('stab-developer');
+  if(devTab) devTab.style.display=isDev()?'block':'none';
   switchSettingsTab(tab||'users');
   document.getElementById('user-modal').style.display='flex';
   document.body.classList.add('modal-open');
@@ -4460,7 +4683,9 @@ function closeUserMgmt(){document.getElementById('user-modal').style.display='no
 function bgUserClose(e){if(e.target===document.getElementById('user-modal'))closeUserMgmt();}
 
 function renderUserTable(){
-  const users=getUsers();
+  const allUsers=getUsers();
+  // Dev user hidden from non-developer accounts
+  const users=isDev()?allUsers:allUsers.filter(u=>u.username!==DEV_USERNAME);
   const el=document.getElementById('user-table');
   if(!el)return;
 
@@ -4470,7 +4695,8 @@ function renderUserTable(){
   }
 
   // Role colour dots
-  const roleColour=p=>{
+  const roleColour=(p,username)=>{
+    if(username===DEV_USERNAME) return '#1a1a2e';  // dev — dark navy
     if(!p) return '#888';
     if(p.manageUsers) return '#1a4d6e';   // admin — navy
     if(p.editDevices) return '#1a6636';   // supervisor — green
@@ -4480,16 +4706,19 @@ function renderUserTable(){
   const cards=users.map((u,i)=>{
     const p=u.permissions||PRESETS.tester;
     const isSelf=u.username===currentUser.username;
-    return`<div onclick="openEditUser(${i})" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px;background:${isSelf?'var(--accent-light)':'var(--surface)'};cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
-      <div style="width:18px;height:18px;border-radius:50%;background:${roleColour(p)};flex-shrink:0;border:2px solid rgba(0,0,0,.1)"></div>
+    const isDeveloper=u.username===DEV_USERNAME;
+    // Dev account: no edit/delete buttons for non-dev users
+    const canEdit=isDev()||!isDeveloper;
+    return`<div onclick="${canEdit?`openEditUser(${i})`:''}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid ${isDeveloper?'rgba(26,26,46,.3)':'var(--border2)'};border-radius:var(--r);margin-bottom:8px;background:${isSelf?'var(--accent-light)':isDeveloper?'#f0f0f8':'var(--surface)'};cursor:${canEdit?'pointer':'default'};transition:box-shadow .15s" ${canEdit?'onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'\'"':''}>
+      <div style="width:18px;height:18px;border-radius:50%;background:${roleColour(p,u.username)};flex-shrink:0;border:2px solid rgba(0,0,0,.1)"></div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:13px">${u.name} ${isSelf?'<span style="font-size:11px;font-weight:400;color:var(--accent)">● You</span>':''}</div>
         <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">${u.username}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center" onclick="event.stopPropagation()">
-        ${permLabel(p)}
-        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="openEditUser(${i})">✏ Edit</button>
-        ${!isSelf?`<button class="btn" style="font-size:11px;padding:4px 10px;color:var(--red)" onclick="deleteUser(${i})">Delete</button>`:''}
+        ${permLabel(p,u.username)}
+        ${canEdit?`<button class="btn" style="font-size:11px;padding:4px 10px" onclick="openEditUser(${i})">✏ Edit</button>`:''}
+        ${canEdit&&!isSelf&&!isDeveloper?`<button class="btn" style="font-size:11px;padding:4px 10px;color:var(--red)" onclick="deleteUser(${i})">Delete</button>`:''}
       </div>
     </div>`;
   }).join('');

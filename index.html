@@ -2758,16 +2758,16 @@ function showSuburbDrilldown(suburb){
     </div>
 
     <!-- Summary tiles with month pill -->
-    <div style="display:flex;align-items:stretch;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">
+    <div style="display:grid;grid-template-columns:auto 1fr;align-items:stretch;gap:8px;margin-bottom:1.25rem">
       ${(()=>{
         const months=[...new Set(subDevices.map(d=>d.scheduledMonth).filter(Boolean))].sort((a,b)=>{
           const mo=['January','February','March','April','May','June','July','August','September','October','November','December'];
           return mo.indexOf(a)-mo.indexOf(b);
         });
-        if(!months.length) return '';
-        return months.map(m=>`<div style="background:var(--accent);color:#fff;border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;white-space:nowrap">${m}</div>`).join('');
+        if(!months.length) return '<div></div>';
+        return`<div style="display:flex;flex-direction:column;gap:8px">${months.map(m=>`<div style="background:var(--accent);color:#fff;border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;white-space:nowrap;text-align:center;flex:1">${m}</div>`).join('')}</div>`;
       })()}
-      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
         <div style="background:var(--surface);border-radius:12px;padding:12px;text-align:center;border:1px solid var(--border2)">
           <div style="font-size:22px;font-weight:700;color:var(--accent)">${total}</div>
           <div style="font-size:11px;color:var(--text3)">Total</div>
@@ -2780,9 +2780,14 @@ function showSuburbDrilldown(suburb){
           <div style="font-size:22px;font-weight:700;color:var(--accent)">${pct}%</div>
           <div style="font-size:11px;color:var(--accent)">Done</div>
         </div>
-        ${overdue>0?`<div style="background:var(--red-bg);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(184,50,50,.15)"><div style="font-size:20px;font-weight:700;color:var(--red)">${overdue}</div><div style="font-size:11px;color:var(--red)">Overdue</div></div>`:''}
-        ${failed>0?`<div style="background:var(--red-bg);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(184,50,50,.15)"><div style="font-size:20px;font-weight:700;color:var(--red)">${failed}</div><div style="font-size:11px;color:var(--red)">Failed</div></div>`:''}
-        ${remaining>0?`<div style="background:var(--surface2);border-radius:12px;padding:10px;text-align:center;border:1px solid var(--border2)"><div style="font-size:20px;font-weight:700;color:var(--text2)">${remaining}</div><div style="font-size:11px;color:var(--text3)">Remaining</div></div>`:''}
+        <div style="background:${failed>0?'var(--red-bg)':'var(--surface2)'};border-radius:12px;padding:12px;text-align:center;border:1px solid ${failed>0?'rgba(184,50,50,.15)':'var(--border2)'}">
+          <div style="font-size:22px;font-weight:700;color:${failed>0?'var(--red)':'var(--text3)'}">${failed}</div>
+          <div style="font-size:11px;color:${failed>0?'var(--red)':'var(--text3)'}">Failed</div>
+        </div>
+        <div style="background:${decommDevices.length>0?'#f0f0f0':'var(--surface2)'};border-radius:12px;padding:12px;text-align:center;border:1px solid var(--border2)">
+          <div style="font-size:22px;font-weight:700;color:${decommDevices.length>0?'#666':'var(--text3)'}">${decommDevices.length}</div>
+          <div style="font-size:11px;color:${decommDevices.length>0?'#666':'var(--text3)'}">Decommissioned</div>
+        </div>
       </div>
     </div>
 

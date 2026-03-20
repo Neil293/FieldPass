@@ -1176,6 +1176,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <button class="rtab" id="rtab-overdue" onclick="switchReportTab('overdue')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
       ⚠ Overdue
     </button>
+    <button class="rtab" id="rtab-decommissioned" onclick="switchReportTab('decommissioned')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
+      ⊖ Decommissioned
+    </button>
     <button class="rtab" id="rtab-templates" onclick="switchReportTab('templates')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:10px 16px;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
       ✉️ Email Templates
     </button>
@@ -2643,6 +2646,64 @@ function renderMonthlyReport(){
     </div>`;
 }
 
+function renderDecommissionedReport(){
+  const el=document.getElementById('reports-content');
+  if(!el) return;
+
+  const list=devices.filter(d=>getStatus(d)==='decommissioned')
+    .sort((a,b)=>a.suburb.localeCompare(b.suburb));
+
+  // Group by suburb
+  const bySuburb={};
+  list.forEach(d=>{
+    if(!bySuburb[d.suburb]) bySuburb[d.suburb]=[];
+    bySuburb[d.suburb].push(d);
+  });
+  const suburbs=Object.keys(bySuburb).sort();
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:10px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#666">⊖ Decommissioned Devices</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${list.length} device${list.length!==1?'s':''} across ${suburbs.length} suburb${suburbs.length!==1?'s':''} — tap any device to reactivate</div>
+      </div>
+    </div>
+    ${list.length===0
+      ?`<div style="text-align:center;padding:3rem 1rem;color:var(--text3)">
+          <div style="font-size:2rem;margin-bottom:0.5rem">✓</div>
+          <div style="font-size:14px;font-weight:500">No decommissioned devices</div>
+        </div>`
+      :suburbs.map(sub=>`
+        <div style="margin-bottom:1rem">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+            <span>${sub}</span>
+            <span style="font-size:10px;background:#f0f0f0;padding:2px 8px;border-radius:10px;border:1px solid #ddd">${bySuburb[sub].length}</span>
+          </div>
+          ${bySuburb[sub].map(d=>{
+            const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
+            const decommDate=d.testDate?(()=>{const[y,m,day]=d.testDate.split('-');return day+'/'+m+'/'+y;})():'—';
+            const bfCode=d.backflowId?extractBfCode(d.backflowId):'';
+            return`<div onclick="closeReports();openDevice(${d.id})" style="background:#f5f5f5;border:1px solid #ddd;border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;opacity:.85">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                <div style="min-width:0;flex:1">
+                  <div style="font-size:13px;font-weight:600;color:var(--text)">${d.make} ${d.model} <span style="font-weight:400;color:var(--text2)">${d.size}mm</span></div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.location}</div>
+                  ${d.serial?`<div style="font-size:11px;color:var(--text3);font-family:var(--mono)">S/N: ${d.serial}${bfCode?' · '+bfCode:''}</div>`:''}
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  <div style="font-size:11px;color:#888;font-weight:500">Decommissioned</div>
+                  <div style="font-size:11px;color:var(--text3)">${decommDate}</div>
+                  <div style="font-size:10px;color:var(--accent);margin-top:4px;font-weight:500">Tap to reactivate →</div>
+                </div>
+              </div>
+              ${lastLog&&lastLog.notes?`<div style="margin-top:5px;font-size:11px;color:var(--text2);background:rgba(0,0,0,.04);padding:4px 8px;border-radius:6px;font-style:italic">${lastLog.notes.slice(0,80)}${lastLog.notes.length>80?'…':''}</div>`:''}
+            </div>`;
+          }).join('')}
+        </div>`
+      ).join('')
+    }`;
+}
+
 function renderTemplatesTab(){
   const el=document.getElementById('reports-content');
   const templates=getTemplates();
@@ -2817,7 +2878,7 @@ function closeReports(){
 
 function switchReportTab(tab){
   currentReportTab=tab;
-  ['suburb','monthly','status','failed','overdue','templates'].forEach(t=>{
+  ['suburb','monthly','status','failed','overdue','decommissioned','templates'].forEach(t=>{
     const btn=document.getElementById('rtab-'+t);
     if(!btn) return;
     if(t===tab){
@@ -2841,6 +2902,7 @@ function renderReport(tab){
   if(tab==='templates'){renderTemplatesTab();return;}
   if(tab==='failed'){renderDeviceListReport('failed');return;}
   if(tab==='overdue'){renderDeviceListReport('overdue');return;}
+  if(tab==='decommissioned'){renderDecommissionedReport();return;}
   if(tab==='monthly'){renderMonthlyReport();return;}
   const showDecom=getSetting('showDecommissioned',true);
   const activeDevices=devices.filter(d=>showDecom||getStatus(d)!=='decommissioned');

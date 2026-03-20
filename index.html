@@ -1083,7 +1083,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Build info</div>
         <div style="font-size:12px;color:var(--text3);line-height:1.8">
           <div>App: <strong id="dev-app-name">—</strong></div>
-          <div>Storage key: <code style="font-family:var(--mono);background:var(--surface2);padding:1px 5px;border-radius:4px">scc_backflow_v7</code></div>
+          <div>Storage key: <code style="font-family:var(--mono);background:var(--surface2);padding:1px 5px;border-radius:4px">fp_devices_v1</code></div>
           <div>Firebase project: <code style="font-family:var(--mono);background:var(--surface2);padding:1px 5px;border-radius:4px">complytrack-6ac7e</code></div>
           <div>Devices loaded: <strong id="dev-device-count">—</strong></div>
           <div>Last sync: <strong id="dev-last-sync">—</strong></div>
@@ -1139,13 +1139,13 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           </select>
         </div>
       </div>
-      <div class="field"><label>Company name</label><input type="text" id="nu-company" placeholder="e.g. Fairy Meadow Plumbing"></div>
+      <div class="field"><label>Company name</label><input type="text" id="nu-company" placeholder="e.g. Smith Plumbing Pty Ltd"></div>
       <div class="frow">
         <div class="field"><label>Phone</label><input type="tel" id="nu-phone" placeholder="e.g. 02 4221 0000"></div>
         <div class="field"><label>Mobile</label><input type="tel" id="nu-mobile" placeholder="e.g. 0400 000 000"></div>
       </div>
       <div class="field"><label>Email</label><input type="email" id="nu-email" placeholder="e.g. neil@fairymeadowplumbing.com.au"></div>
-      <div class="field"><label>Address</label><input type="text" id="nu-addr" placeholder="e.g. 123 Main St, Fairy Meadow NSW 2519"></div>
+      <div class="field"><label>Address</label><input type="text" id="nu-addr" placeholder="e.g. 123 Main St, Sydney NSW 2000"></div>
       <div style="background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);padding:12px">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:10px">Permissions</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="nu-perms">
@@ -1249,12 +1249,12 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 <script>
 // SEED_DATA loaded from data.js
 const SEED_DATA=window.SEED_DATA||[];
-const KEY='scc_backflow_v7';
-const KEY_OLD='scc_backflow_v6';
+const KEY='fp_devices_v1';
+const KEY_OLD='scc_backflow_v7';
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const CLIENTS_KEY='bf_clients_v1';
 const ACTIVE_CLIENT_KEY='bf_active_client_v1';
-const SCC_CLIENT_ID='scc';
+const SCC_CLIENT_ID='default';
 
 // ── App name — change this one line to rename the app everywhere ──
 const APP_NAME='FieldPass';
@@ -1268,7 +1268,7 @@ function getClients(){
   // Default: SCC built-in client
   return [{
     id:SCC_CLIENT_ID,
-    name:'Shoalhaven City Council',
+    name:'My Organisation',
     abbr:'SCC',
     colour:'#1a4d6e',
     builtIn:true,
@@ -1290,7 +1290,7 @@ function getActiveClient(){
   return getClients().find(c=>c.id===id)||getClients()[0];
 }
 function deviceKeyForClient(clientId){
-  return clientId===SCC_CLIENT_ID?KEY:`bf_devices_${clientId}_v1`;
+  return clientId===SCC_CLIENT_ID?KEY:`fp_devices_${clientId}_v1`;
 }
 
 let devices=[];
@@ -1428,6 +1428,30 @@ function sortByNearest(){
     },
     {enableHighAccuracy:true,timeout:10000}
   );
+}
+
+function migrateStorageKeys(){
+  // Migrate old scc_* keys to new fp_* keys — runs once on first load
+  const migrations=[
+    ['scc_backflow_v7','fp_devices_v1'],
+    ['scc_users_v1',   'fp_users_v1'],
+    ['scc_session_v1', 'fp_session_v1'],
+    ['scc_email_log_v1','fp_email_log_v1'],
+  ];
+  migrations.forEach(([oldKey,newKey])=>{
+    if(!localStorage.getItem(newKey)&&localStorage.getItem(oldKey)){
+      localStorage.setItem(newKey,localStorage.getItem(oldKey));
+      console.log(`FieldPass: migrated ${oldKey} → ${newKey}`);
+    }
+  });
+  // Migrate old client ID 'scc' to 'default'
+  const activeClient=localStorage.getItem('bf_active_client_v1');
+  if(activeClient==='scc') localStorage.setItem('bf_active_client_v1','default');
+  // Migrate old device data keyed as scc to default
+  const oldDevKey='fp_devices_scc_v1';
+  if(!localStorage.getItem('fp_devices_default_v1')&&localStorage.getItem(oldDevKey)){
+    localStorage.setItem('fp_devices_default_v1',localStorage.getItem(oldDevKey));
+  }
 }
 
 function load(){
@@ -2996,7 +3020,7 @@ function applyTemplate(suburb){
   const fmtD=s=>{if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;};
   const clientName=ci.org||getActiveClient().name;
   const senderName=currentUser.name;
-  const senderCompany=currentUser&&currentUser.company?currentUser.company:'Fairy Meadow Plumbing';
+  const senderCompany=currentUser&&currentUser.company?currentUser.company:'';
   const senderPhone=[currentUser.phone,currentUser.mobile].filter(Boolean).join(' | ')||'';
   const senderEmail=currentUser.email||'';
 
@@ -3680,7 +3704,7 @@ function emailSuburbReport(suburb, evt){
   }
 }
 
-const EMAIL_LOG_KEY='scc_email_log_v1';
+const EMAIL_LOG_KEY='fp_email_log_v1';
 
 function getEmailLog(){
   try{return JSON.parse(localStorage.getItem(EMAIL_LOG_KEY))||{};}catch(e){return{};}
@@ -3849,8 +3873,8 @@ function showToast(msg, duration=2500){
 }
 
 // ── Auth system ────────────────────────────────────────
-const USERS_KEY='scc_users_v1';
-const SESSION_KEY='scc_session_v1';
+const USERS_KEY='fp_users_v1';
+const SESSION_KEY='fp_session_v1';
 let currentUser=null;
 
 // ── Password hashing — SHA-256 via crypto.subtle ─────────
@@ -3974,8 +3998,8 @@ function resetAdminAccount(e){
   if(e)e.preventDefault();
   const adminPerms={recordTests:true,editDevices:true,addDevices:true,viewHistory:true,exportCSV:true,manageUsers:true};
   // Wipe ALL users and recreate only admin
-  localStorage.setItem('scc_users_v1',JSON.stringify([
-    {username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:adminPerms}
+  localStorage.setItem('fp_users_v1',JSON.stringify([
+    {username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:adminPerms}
   ]));
   const err=document.getElementById('login-err');
   err.style.display='block';
@@ -3991,7 +4015,7 @@ function resetAdminAccount(e){
 function initUsers(){
   const users=getUsers();
   if(!users.length){
-    saveUsers([{username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:PRESETS.admin}]);
+    saveUsers([{username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:PRESETS.admin}]);
   }
   // Migrate old role-based users to permissions
   const current=getUsers();
@@ -4022,7 +4046,7 @@ function initUsers(){
   const hasAdmin=final.some(u=>u.permissions&&u.permissions.manageUsers);
   if(!hasAdmin){
     const a=getUsers();
-    a.push({username:'admin',password:hashPass('admin123'),name:'Administrator',company:'Fairy Meadow Plumbing',permissions:PRESETS.admin});
+    a.push({username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:PRESETS.admin});
     saveUsers(a);
   }
 }
@@ -4305,7 +4329,7 @@ function openEditClient(id){
         <div style="border-top:1px solid var(--border2);margin:1.25rem 0 1rem"></div>
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:10px">Contact Information</div>
         <div class="frow">
-          <div class="field"><label>Organisation name</label><input type="text" id="ec-org" value="${esc(ci.org||'')}" placeholder="e.g. Shoalhaven City Council"></div>
+          <div class="field"><label>Organisation name</label><input type="text" id="ec-org" value="${esc(ci.org||'')}" placeholder="e.g. City Council or Company Name"></div>
           <div class="field"><label>Department / team</label><input type="text" id="ec-dept" value="${esc(ci.dept||'')}" placeholder="e.g. Water Operations"></div>
         </div>
         <div class="frow">
@@ -4684,7 +4708,7 @@ function bgUserClose(e){if(e.target===document.getElementById('user-modal'))clos
 
 function renderUserTable(){
   const allUsers=getUsers();
-  // Dev user hidden from non-developer accounts
+  // Dev user hidden from non-developer accounts, but dev can see themselves
   const users=isDev()?allUsers:allUsers.filter(u=>u.username!==DEV_USERNAME);
   const el=document.getElementById('user-table');
   if(!el)return;
@@ -4709,7 +4733,7 @@ function renderUserTable(){
     const isDeveloper=u.username===DEV_USERNAME;
     // Dev account: no edit/delete buttons for non-dev users
     const canEdit=isDev()||!isDeveloper;
-    return`<div onclick="${canEdit?`openEditUser(${i})`:''}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid ${isDeveloper?'rgba(26,26,46,.3)':'var(--border2)'};border-radius:var(--r);margin-bottom:8px;background:${isSelf?'var(--accent-light)':isDeveloper?'#f0f0f8':'var(--surface)'};cursor:${canEdit?'pointer':'default'};transition:box-shadow .15s" ${canEdit?'onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'\'"':''}>
+    return`<div onclick="${canEdit?`openEditUser('${u.username}')`:''}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid ${isDeveloper?'rgba(26,26,46,.3)':'var(--border2)'};border-radius:var(--r);margin-bottom:8px;background:${isSelf?'var(--accent-light)':isDeveloper?'#f0f0f8':'var(--surface)'};cursor:${canEdit?'pointer':'default'};transition:box-shadow .15s" ${canEdit?'onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'\'"':''}>
       <div style="width:18px;height:18px;border-radius:50%;background:${roleColour(p,u.username)};flex-shrink:0;border:2px solid rgba(0,0,0,.1)"></div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:13px">${u.name} ${isSelf?'<span style="font-size:11px;font-weight:400;color:var(--accent)">● You</span>':''}</div>
@@ -4717,7 +4741,7 @@ function renderUserTable(){
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center" onclick="event.stopPropagation()">
         ${permLabel(p,u.username)}
-        ${canEdit?`<button class="btn" style="font-size:11px;padding:4px 10px" onclick="openEditUser(${i})">✏ Edit</button>`:''}
+        ${canEdit?`<button class="btn" style="font-size:11px;padding:4px 10px" onclick="openEditUser('${u.username}')">✏ Edit</button>`:''}
         ${canEdit&&!isSelf&&!isDeveloper?`<button class="btn" style="font-size:11px;padding:4px 10px;color:var(--red)" onclick="deleteUser(${i})">Delete</button>`:''}
       </div>
     </div>`;
@@ -4729,9 +4753,10 @@ function renderUserTable(){
   el.parentNode.replaceChild(container,el);
 }
 
-function openEditUser(i){
+function openEditUser(username){
   const users=getUsers();
-  const u=users[i];
+  const u=users.find(u=>u.username===username);
+  const i=users.indexOf(u);
   if(!u)return;
   const p=u.permissions||PRESETS.tester;
   const isSelf=u.username===currentUser.username;
@@ -4769,13 +4794,13 @@ function openEditUser(i){
         <div class="field"><label>New password <span style="font-weight:400;color:var(--text3)">(leave blank to keep current)</span></label>
           <input type="password" id="eu-pass" placeholder="Enter new password to change" autocomplete="new-password">
         </div>
-        <div class="field"><label>Company name</label><input type="text" id="eu-company" value="${(u.company||'').replace(/"/g,'&quot;')}" placeholder="e.g. Fairy Meadow Plumbing"></div>
+        <div class="field"><label>Company name</label><input type="text" id="eu-company" value="${(u.company||'').replace(/"/g,'&quot;')}" placeholder="e.g. Smith Plumbing Pty Ltd"></div>
         <div class="frow">
           <div class="field"><label>Phone</label><input type="tel" id="eu-phone" value="${(u.phone||'').replace(/"/g,'&quot;')}" placeholder="e.g. 02 4221 0000"></div>
           <div class="field"><label>Mobile</label><input type="tel" id="eu-mobile" value="${(u.mobile||'').replace(/"/g,'&quot;')}" placeholder="e.g. 0400 000 000"></div>
         </div>
         <div class="field"><label>Email</label><input type="email" id="eu-email" value="${(u.email||'').replace(/"/g,'&quot;')}" placeholder="e.g. neil@fairymeadowplumbing.com.au"></div>
-        <div class="field"><label>Address</label><input type="text" id="eu-addr" value="${(u.addr||'').replace(/"/g,'&quot;')}" placeholder="e.g. 123 Main St, Fairy Meadow NSW 2519"></div>
+        <div class="field"><label>Address</label><input type="text" id="eu-addr" value="${(u.addr||'').replace(/"/g,'&quot;')}" placeholder="e.g. 123 Main St, Sydney NSW 2000"></div>
         <div class="field">
           <label>Preset</label>
           <select id="eu-preset" onchange="applyEditUserPreset()" ${isSelf?'disabled style="opacity:.6"':''}>
@@ -5237,6 +5262,7 @@ function openDeviceFromMap(id){
 // Invalidate map size when modal opens (handles flex layout reflow)
 const _origOpenMap=openMapView;
 
+migrateStorageKeys();
 initUsers();
 if(restoreSession()){showApp();}
 // load() is now called inside showApp()

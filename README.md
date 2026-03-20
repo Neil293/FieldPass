@@ -1,4 +1,4 @@
-# ComplyHub — Backflow Device Compliance Register
+# FieldPass — Backflow Device Compliance Register
 
 A progressive web app (PWA) for managing and tracking backflow prevention device compliance testing. Built for field staff and administrators to record, track and report on testing across a large device register.
 
@@ -8,7 +8,7 @@ A progressive web app (PWA) for managing and tracking backflow prevention device
 
 ## Overview
 
-ComplyHub is a mobile-first compliance management tool that works offline and syncs to Firebase when a connection is available. The entire app runs as a single HTML file with no build tools or frameworks required.
+FieldPass is a mobile-first compliance management tool that works offline and syncs to Firebase when a connection is available. The entire app runs as a single HTML file with no build tools or frameworks required.
 
 ---
 
@@ -150,7 +150,7 @@ Found in **☰ Menu → Settings → ⚙️ Data**:
 
 ## Firebase Sync
 
-ComplyHub uses a **single-document sync strategy** — all data is stored as one Firestore document (`ct_sync/main`) rather than individual records. This minimises Firebase write operations and stays well within the free tier limits.
+FieldPass uses a **single-document sync strategy** — all data is stored as one Firestore document (`ct_sync/main`) rather than individual records. This minimises Firebase write operations and stays well within the free tier limits.
 
 **Synced data:** devices, users, clients, settings, email templates
 
@@ -208,4 +208,4 @@ To update:
 
 ## License
 
-Internal use — ComplyHub.
+Internal use — FieldPass.

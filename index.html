@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ComplyHub</title>
+<title>FieldPass</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a4d6e">
@@ -426,7 +426,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       </svg>
       <!-- Wordmark -->
       <div style="text-align:center">
-        <div style="font-size:22px;font-weight:700;letter-spacing:-0.03em;color:#1a2332;line-height:1">ComplyHub</div>
+        <div style="font-size:22px;font-weight:700;letter-spacing:-0.03em;color:#1a2332;line-height:1">FieldPass</div>
         <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#4a9fff;margin-top:4px">Compliance Management</div>
       </div>
     </div>
@@ -466,10 +466,10 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       </svg>
     </div>
     <div style="display:flex;flex-direction:column;gap:0;line-height:1;min-width:0">
-      <span class="nav-full" id="nav-client-name" style="font-size:15px;font-weight:700;letter-spacing:-0.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ComplyHub</span>
+      <span class="nav-full" id="nav-client-name" style="font-size:15px;font-weight:700;letter-spacing:-0.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">FieldPass</span>
       <span class="nav-full" style="font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;opacity:0.55"><span id="nav-client-sub">Compliance Management</span></span>
     </div>
-    <span class="nav-short" style="display:none;font-weight:700;font-size:14px">ComplyHub</span>
+    <span class="nav-short" style="display:none;font-weight:700;font-size:14px">FieldPass</span>
   </div>
   <div id="client-switcher" style="display:none;gap:6px;align-items:center;flex-shrink:0"></div>
   <!-- Sync status indicator -->
@@ -660,7 +660,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <div id="empty" class="empty" style="display:none">No devices match your filters.</div>
   </div>
 </main>
-<footer>ComplyHub &mdash; Data stored locally in your browser.</footer>
+<footer>FieldPass &mdash; Data stored locally in your browser.</footer>
 </div><!-- end #app -->
 <div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.55);z-index:500;align-items:flex-end;justify-content:center" onclick="bgClose(event)">
   <div id="modal-sheet" style="background:var(--surface);width:100%;height:96dvh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.3)">
@@ -1192,7 +1192,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   <div style="background:var(--surface);border-radius:18px;padding:1.5rem;max-width:340px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.3)">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.75rem">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="10" fill="#fff3cd" stroke="#e6a817" stroke-width="1.5"/><path d="M11 7v5M11 15v.5" stroke="#e6a817" stroke-width="2" stroke-linecap="round"/></svg>
-      <div style="font-size:15px;font-weight:700;color:var(--text)" id="ct-confirm-title">ComplyHub</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)" id="ct-confirm-title">FieldPass</div>
     </div>
     <div style="font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:1.25rem" id="ct-confirm-msg"></div>
     <div style="display:flex;gap:10px">
@@ -1215,7 +1215,7 @@ const ACTIVE_CLIENT_KEY='bf_active_client_v1';
 const SCC_CLIENT_ID='scc';
 
 // ── App name — change this one line to rename the app everywhere ──
-const APP_NAME='ComplyHub';
+const APP_NAME='FieldPass';
 
 // ── Client helpers ─────────────────────────────────────
 function getClients(){
@@ -1583,7 +1583,7 @@ function forceSyncNow(){
   clearTimeout(_syncTimeout);
 
   const step=(msg)=>{
-    console.log('ComplyHub sync: '+msg);
+    console.log('FieldPass sync: '+msg);
     showToast(msg);
     setSyncStatus('syncing');
   };
@@ -1619,7 +1619,7 @@ function forceSyncNow(){
       const msg=(err.code||'')+' '+(err.message||'');
       setSyncStatus('error',msg);
       showToast('✗ Sync failed: '+( err.code||err.message||'unknown'));
-      console.error('ComplyHub force sync failed:',err);
+      console.error('FieldPass force sync failed:',err);
     }
   })();
 }
@@ -1743,7 +1743,7 @@ function startFirebaseListener(){
     (snap)=>{
       if(!snap.exists()){
         setSyncStatus('synced');
-        console.log('ComplyHub: Firestore doc does not exist yet — use Force Sync to create it');
+        console.log('FieldPass: Firestore doc does not exist yet — use Force Sync to create it');
         return;
       }
       const data=snap.data();
@@ -1753,11 +1753,11 @@ function startFirebaseListener(){
       const remoteBy=data.updatedBy||'';
       const sessionTs=window._lastSyncTs||0;
 
-      console.log(`ComplyHub sync: remoteTs=${remoteTs} sessionTs=${sessionTs} remoteBy=${remoteBy} me=${currentUser?currentUser.username:''}`);
+      console.log(`FieldPass sync: remoteTs=${remoteTs} sessionTs=${sessionTs} remoteBy=${remoteBy} me=${currentUser?currentUser.username:''}`);
 
       // Apply if remote is newer than what THIS session last wrote
       if(remoteTs>sessionTs){
-        console.log('ComplyHub: applying remote data');
+        console.log('FieldPass: applying remote data');
         if(data.devices&&data.devices.length>0){
           devices=data.devices;
           const storageKey=deviceKeyForClient(getActiveClientId());
@@ -1784,12 +1784,12 @@ function startFirebaseListener(){
           showToast('↓ Data updated from cloud');
         }
       } else {
-        console.log('ComplyHub: remote data is not newer, skipping');
+        console.log('FieldPass: remote data is not newer, skipping');
       }
       setSyncStatus('synced');
     },
     (err)=>{
-      console.error('ComplyHub Firestore listener error:',err);
+      console.error('FieldPass Firestore listener error:',err);
       setSyncStatus('error',(err.code?err.code+' — ':'')+err.message);
     }
   );
@@ -4069,7 +4069,7 @@ function openEditClient(id){
           <div class="field"><label>Website</label><input type="text" id="ec-web" value="${esc(ci.web||'')}" placeholder="e.g. shoalhaven.nsw.gov.au"></div>
         </div>
         <div class="field"><label>Email footer note</label>
-          <textarea id="ec-footer" style="height:65px;resize:vertical;font-family:var(--sans);width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text)" placeholder="e.g. This report is generated from ComplyHub.">${esc(ci.footer||'')}</textarea>
+          <textarea id="ec-footer" style="height:65px;resize:vertical;font-family:var(--sans);width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text)" placeholder="e.g. This report is generated from FieldPass.">${esc(ci.footer||'')}</textarea>
         </div>
 
       </div>

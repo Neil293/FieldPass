@@ -1,7 +1,7 @@
 {
-  "name": "ComplyHub",
-  "short_name": "ComplyHub",
-  "description": "ComplyHub \u2014 Compliance Management",
+  "name": "FieldPass",
+  "short_name": "FieldPass",
+  "description": "FieldPass \u2014 Compliance Management",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0d2d44",

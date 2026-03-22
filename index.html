@@ -1051,9 +1051,14 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         </label>
 
       </div>
+      <!-- Map pin colours -->
+      <div style="border-top:1px solid var(--border2);padding-top:1rem;margin-top:0.5rem">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">🗺 Map pin colours</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Customise the colour of each status pin on the map.</div>
+        <div id="map-colour-pickers" style="display:flex;flex-direction:column;gap:8px"></div>
+        <button onclick="resetMapColours()" style="font-family:var(--sans);margin-top:10px;padding:8px 16px;font-size:12px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer">Reset to defaults</button>
+      </div>
     </div>
-
-    <!-- Developer pane — only visible when logged in as dev -->
     <div id="settings-pane-developer" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1.25rem 2rem;flex:1">
       <div style="background:#1a1a2e;color:#7eb8f7;border-radius:var(--r);padding:10px 14px;font-size:12px;font-weight:600;margin-bottom:1rem;letter-spacing:.03em">🛠 Developer Panel — FieldPass Internal</div>
 
@@ -4579,6 +4584,7 @@ function switchSettingsTab(tab){
       btn.style.fontWeight=t===tab?'600':'500';
     }
   });
+  if(tab==='settings') renderMapColourPickers();
   if(tab==='developer'){
     // Dev tab uses different active colour
     const devBtn=document.getElementById('stab-developer');
@@ -4664,6 +4670,104 @@ function renderAuditLog(){
   if(!el) return;
   if(!_impersonationLog.length){el.textContent='No entries this session.';return;}
   el.innerHTML=_impersonationLog.slice().reverse().map(e=>`<div>${e.ts} — ${e.action}</div>`).join('');
+}
+
+function renderMapColourPickers(){
+  const el=document.getElementById('map-colour-pickers');
+  if(!el) return;
+  const colours=getMapColours();
+  const labels={
+    overdue:  'Overdue',
+    due:      'Due this month',
+    due_next: 'Next month',
+    upcoming: 'Upcoming',
+    pending:  'No date / Pending',
+    complete: 'Completed',
+    failed:   'Failed'
+  };
+  el.innerHTML=Object.entries(labels).map(([key,label])=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)">
+      <input type="color" value="${colours[key]||MAP_COLOURS_DEFAULT[key]}" 
+        onchange="updateMapColour('${key}',this.value)"
+        style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;background:none;flex-shrink:0">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${label}</div>
+        <div id="map-colour-val-${key}" style="font-size:11px;color:var(--text3);font-family:var(--mono)">${colours[key]||MAP_COLOURS_DEFAULT[key]}</div>
+      </div>
+      <div id="map-colour-pin-${key}" style="width:14px;height:18px;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;background:${colours[key]||MAP_COLOURS_DEFAULT[key]};border:2px solid rgba(0,0,0,.15)"></div>
+    </div>`).join('');
+}
+
+function refreshMapPins(){
+  if(typeof refreshMapMarkers==='function') refreshMapMarkers();
+}
+
+function updateMapColour(key,value){
+  const colours=getMapColours();
+  colours[key]=value;
+  saveMapColours(colours);
+  const val=document.getElementById('map-colour-val-'+key);
+  if(val) val.textContent=value;
+  const pin=document.getElementById('map-colour-pin-'+key);
+  if(pin) pin.style.background=value;
+  renderMapLegend();
+  refreshMapPins();
+  showToast('Colour updated');
+}
+
+function toggleMapColourPanel(){
+  const panel=document.getElementById('map-colour-panel');
+  if(!panel) return;
+  const isOpen=panel.style.display!=='none';
+  panel.style.display=isOpen?'none':'block';
+  if(!isOpen) renderInlineColourPickers();
+}
+
+function renderMapLegend(){
+  const el=document.getElementById('map-legend-bar');
+  if(!el) return;
+  const colours=getMapColours();
+  const items=[
+    {key:'overdue', label:'Overdue'},
+    {key:'due',     label:'Due'},
+    {key:'due_next',label:'Next month'},
+    {key:'upcoming',label:'Upcoming'},
+    {key:'pending', label:'No date'},
+    {key:'failed',  label:'Failed'},
+    {key:'complete',label:'Completed'},
+  ];
+  el.innerHTML=`<span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Legend:</span>`+
+    items.map(({key,label})=>`
+      <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap">
+        <span style="width:11px;height:11px;border-radius:50%;background:${colours[key]||MAP_COLOURS_DEFAULT[key]};display:inline-block;flex-shrink:0"></span>${label}
+      </span>`).join('')+
+    `<span id="map-count" style="margin-left:auto;font-size:12px;color:var(--text3);white-space:nowrap;padding-left:8px"></span>`;
+}
+
+function renderInlineColourPickers(){
+  const el=document.getElementById('map-inline-colour-pickers');
+  if(!el) return;
+  const colours=getMapColours();
+  const labels={
+    overdue:'Overdue', due:'Due this month', due_next:'Next month',
+    upcoming:'Upcoming', pending:'No date', complete:'Completed', failed:'Failed'
+  };
+  el.innerHTML=Object.entries(labels).map(([key,label])=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)">
+      <input type="color" value="${colours[key]||MAP_COLOURS_DEFAULT[key]}"
+        onchange="updateMapColour('${key}',this.value);renderMapLegend();refreshMapPins()"
+        style="width:30px;height:30px;border:none;border-radius:6px;cursor:pointer;padding:2px;background:none;flex-shrink:0">
+      <span style="font-size:12px;font-weight:500;color:var(--text);flex:1">${label}</span>
+    </div>`).join('');
+}
+
+function resetMapColours(){
+  localStorage.removeItem(MAP_COLOURS_KEY);
+  renderMapColourPickers();
+  renderInlineColourPickers();
+  renderMapLegend();
+  refreshMapPins();
+  showToast('Map colours reset to defaults');
 }
 
 function toggleFeatureFlag(key,val){
@@ -5123,7 +5227,8 @@ let mapMarkers=[];
 let mapFilter='all';
 let userLocationMarker=null;
 
-const MAP_COLOURS={
+const MAP_COLOURS_KEY='fp_map_colours_v1';
+const MAP_COLOURS_DEFAULT={
   overdue:'#c0392b',
   due:'#e67e22',
   due_next:'#1976d2',
@@ -5132,6 +5237,18 @@ const MAP_COLOURS={
   complete:'#27ae60',
   failed:'#c0392b'
 };
+
+function getMapColours(){
+  try{
+    const s=localStorage.getItem(MAP_COLOURS_KEY);
+    return s?{...MAP_COLOURS_DEFAULT,...JSON.parse(s)}:{...MAP_COLOURS_DEFAULT};
+  }catch(e){return{...MAP_COLOURS_DEFAULT};}
+}
+function saveMapColours(colours){
+  localStorage.setItem(MAP_COLOURS_KEY,JSON.stringify(colours));
+}
+// Keep MAP_COLOURS as a live getter for backward compat
+const MAP_COLOURS=MAP_COLOURS_DEFAULT;
 
 function makeMarkerIcon(colour,size=16){
   const s=size, r=s/2;
@@ -5146,13 +5263,13 @@ function makeMarkerIcon(colour,size=16){
 }
 
 function makeFailedMarkerIcon(){
-  // Large pulsing marker with ✕ — always renders on top
+  const failColour=getMapColours().failed||'#c0392b';
   const html=`
     <div style="position:relative;width:36px;height:44px">
-      <div style="position:absolute;top:0;left:0;width:36px;height:36px;border-radius:50%;background:rgba(192,57,43,0.25);animation:bf-pulse 1.4s ease-out infinite"></div>
-      <div style="position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:50%;background:rgba(192,57,43,0.2);animation:bf-pulse 1.4s ease-out infinite 0.4s"></div>
+      <div style="position:absolute;top:0;left:0;width:36px;height:36px;border-radius:50%;background:${failColour}40;animation:bf-pulse 1.4s ease-out infinite"></div>
+      <div style="position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:50%;background:${failColour}33;animation:bf-pulse 1.4s ease-out infinite 0.4s"></div>
       <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:2px;left:2px" width="32" height="40" viewBox="0 0 32 40">
-        <path d="M16 37 C16 37 1 26 1 14 a15 15 0 1 1 30 0 C31 26 16 37 16 37z" fill="#c0392b" stroke="white" stroke-width="2"/>
+        <path d="M16 37 C16 37 1 26 1 14 a15 15 0 1 1 30 0 C31 26 16 37 16 37z" fill="${failColour}" stroke="white" stroke-width="2"/>
         <line x1="10" y1="10" x2="22" y2="22" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
         <line x1="22" y1="10" x2="10" y2="22" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
       </svg>
@@ -5165,7 +5282,7 @@ function makeFailedMarkerIcon(){
 
 function openMapView(){
   document.getElementById('map-modal').style.display='flex';
-  // Load Leaflet lazily
+  renderMapLegend();
   if(!window.L){
     const script=document.createElement('script');
     script.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
@@ -5225,7 +5342,8 @@ function refreshMapMarkers(){
 
   [...nonFailed,...failedDevices].forEach(d=>{
     const s=getStatus(d);
-    const colour=MAP_COLOURS[s]||MAP_COLOURS.pending;
+    const mc=getMapColours();
+    const colour=mc[s]||mc.pending;
     const isFailed=s==='failed';
     const icon=isFailed?makeFailedMarkerIcon():makeMarkerIcon(colour);
     const zOff=isFailed?1000:0;
@@ -5419,8 +5537,8 @@ function generateQR(url, deviceName){
       <button onclick="closeMapView()" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:300">&#x2715;</button>
     </div>
   </div>
-  <!-- Map header row 2: filter tabs — horizontally scrollable -->
-  <div style="background:var(--accent);border-top:1px solid rgba(255,255,255,.12);padding:6px 12px;display:flex;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0">
+  <!-- Map header row 2: filter tabs + gear icon -->
+  <div style="background:var(--accent);border-top:1px solid rgba(255,255,255,.12);padding:6px 12px;display:flex;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0;align-items:center">
     <button class="mfbtn active" data-status="all" onclick="setMapFilter('all',this)">All</button>
     <button class="mfbtn" data-status="overdue" onclick="setMapFilter('overdue',this)">Overdue</button>
     <button class="mfbtn" data-status="due" onclick="setMapFilter('due',this)">Due</button>
@@ -5428,18 +5546,20 @@ function generateQR(url, deviceName){
     <button class="mfbtn" data-status="upcoming" onclick="setMapFilter('upcoming',this)">Upcoming</button>
     <button class="mfbtn" data-status="failed" onclick="setMapFilter('failed',this)">Failed</button>
     <button class="mfbtn" data-status="complete" onclick="setMapFilter('complete',this)">Completed</button>
+    <button onclick="toggleMapColourPanel()" title="Customise pin colours" style="font-family:var(--sans);flex-shrink:0;margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="white" stroke-width="1.3"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M9.01 9.01l1.06 1.06M2.93 11.07l1.06-1.06M9.01 4.99l1.06-1.06" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </button>
   </div>
-  <!-- Legend -->
-  <div style="background:var(--surface);border-bottom:1px solid var(--border2);padding:6px 14px;display:flex;align-items:center;gap:14px;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
-    <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Legend:</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap"><span style="width:11px;height:11px;border-radius:50%;background:#c0392b;display:inline-block;flex-shrink:0"></span>Overdue</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap"><span style="width:11px;height:11px;border-radius:50%;background:#e67e22;display:inline-block;flex-shrink:0"></span>Due</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap"><span style="width:11px;height:11px;border-radius:50%;background:#1976d2;display:inline-block;flex-shrink:0"></span>Next month</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap"><span style="width:11px;height:11px;border-radius:50%;background:#64b5f6;display:inline-block;flex-shrink:0"></span>Upcoming</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap"><span style="width:11px;height:11px;border-radius:50%;background:#888;display:inline-block;flex-shrink:0"></span>No date</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap"><span style="width:11px;height:11px;border-radius:50%;background:#c0392b;display:inline-block;flex-shrink:0;border:2px solid #fff;outline:1px solid #c0392b"></span>Failed</span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap"><span style="width:11px;height:11px;border-radius:50%;background:#27ae60;display:inline-block;flex-shrink:0"></span>Completed</span>
-    <span id="map-count" style="margin-left:auto;font-size:12px;color:var(--text3);white-space:nowrap;padding-left:8px"></span>
+  <!-- Colour customiser panel — hidden by default -->
+  <div id="map-colour-panel" style="display:none;background:var(--surface);border-bottom:1px solid var(--border2);padding:10px 14px;flex-shrink:0;max-height:220px;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:600;color:var(--text)">Customise pin colours</span>
+      <button onclick="resetMapColours();renderMapLegend()" style="font-family:var(--sans);font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer">Reset defaults</button>
+    </div>
+    <div id="map-inline-colour-pickers" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+  </div>
+  <!-- Legend — dots driven by current colours -->
+  <div id="map-legend-bar" style="background:var(--surface);border-bottom:1px solid var(--border2);padding:6px 14px;display:flex;align-items:center;gap:14px;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
   </div>
   <!-- Map container -->
   <div id="map-container" style="flex:1;position:relative;min-height:0">

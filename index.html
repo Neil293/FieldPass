@@ -2943,15 +2943,16 @@ function renderActivityChart(){
   const el=document.getElementById('reports-content');
   if(!el) return;
 
-  // Build a map of date → count from all test log entries
+  // Build a map of date → count from testLog entries only (real Pass/Fail/Repaired/Decommissioned)
+  const validResults=['Pass','Fail','Repaired','Decommissioned'];
   const dateCounts={};
   devices.forEach(d=>{
     if(d.testLog&&d.testLog.length){
       d.testLog.forEach(entry=>{
-        if(entry.date) dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
+        if(entry.date&&validResults.includes(entry.result)){
+          dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
+        }
       });
-    } else if(d.testDate&&d.testResult&&d.testResult!=='Pending'){
-      dateCounts[d.testDate]=(dateCounts[d.testDate]||0)+1;
     }
   });
 

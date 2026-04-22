@@ -206,7 +206,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
      TOOLBAR / FILTERS — hidden on mobile
   ═══════════════════════════════════════ */
   .toolbar{display:none}
-  #mob-filter-bar{display:flex!important;max-width:100vw;overflow-x:auto}
+  #mob-filter-bar{display:flex!important;overflow-x:auto;width:100%}
 
   /* ═══════════════════════════════════════
      DEVICE CARDS (table → cards)
@@ -228,7 +228,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   td:nth-child(5){display:none}
   td:nth-child(6){grid-column:2;grid-row:3;padding:0 8px 10px;font-size:11px;color:var(--text3);word-break:break-word}
   td:nth-child(7){grid-column:3;grid-row:1;padding:10px 10px 2px;display:flex;align-items:flex-start;justify-content:flex-end}
-  td:nth-child(8){grid-column:3;grid-row:2;padding:0 10px 2px;font-size:10px;color:var(--text3);text-align:right;white-space:nowrap}
+  td:nth-child(8){grid-column:3;grid-row:2;padding:0 10px 2px;font-size:10px;color:var(--text3);text-align:right}
   td:nth-child(9){grid-column:3;grid-row:3;padding:0 10px 10px;display:flex;align-items:flex-end;justify-content:flex-end}
   td:nth-child(10){display:none}
   .row-acts{display:none}
@@ -589,7 +589,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   </div>
   <div class="metrics" id="metrics"></div>
   <!-- Mobile month quick-select pills + count -->
-  <div id="mob-filter-bar" style="padding:5px 0.75rem 4px;align-items:center;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:100vw;box-sizing:border-box;margin-left:-1.25rem;margin-right:-1.25rem">
+  <div id="mob-filter-bar" style="padding:5px 0.75rem 4px;align-items:center;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;box-sizing:border-box;width:100%">
     <!-- Pin/location quick button -->
     <button id="mob-pin-btn" onclick="sortByNearest()" title="Sort by nearest" style="font-family:var(--sans);flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,0,0,.12);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:0">
       <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" id="mob-pin-icon">
@@ -2952,7 +2952,7 @@ function renderActivityChart(){
   devices.forEach(d=>{
     if(d.testLog&&d.testLog.length){
       d.testLog.forEach(entry=>{
-        if(entry.date&&entry.result&&validResults.includes(entry.result)&&entry.tester&&entry.tester!=='Unknown'){
+        if(entry.date&&entry.result&&validResults.includes(entry.result)&&entry.tester&&entry.tester!=='Unknown'&&entry.tester!=='Developer'){
           dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
           testerCounts[entry.tester]=(testerCounts[entry.tester]||0)+1;
           debugEntries.push({date:entry.date,result:entry.result,tester:entry.tester,device:`${d.make} ${d.model} S/N:${d.serial}`});

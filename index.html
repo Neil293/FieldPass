@@ -65,7 +65,7 @@ nav{background:var(--accent);color:#fff;padding:0 1.5rem;height:54px;display:fle
 .nbtn:hover{background:rgba(255,255,255,0.2)}
 .nbtn-p{background:#fff;color:var(--accent);border-color:transparent}
 .nbtn-p:hover{background:#edf2f5}
-main{max-width:1200px;margin:0 auto;padding:1.5rem 1.25rem 4rem}
+main{max-width:1200px;margin:0 auto;padding:1.5rem 1.25rem 4rem;overflow-x:hidden}
 .page-hdr{margin-bottom:1.5rem}
 .page-hdr h1{font-size:22px;font-weight:600;letter-spacing:-0.02em}
 .page-hdr p{color:var(--text2);font-size:13px;margin-top:3px}
@@ -206,7 +206,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
      TOOLBAR / FILTERS — hidden on mobile
   ═══════════════════════════════════════ */
   .toolbar{display:none}
-  #mob-filter-bar{display:flex!important}
+  #mob-filter-bar{display:flex!important;max-width:100vw;overflow-x:auto}
 
   /* ═══════════════════════════════════════
      DEVICE CARDS (table → cards)
@@ -589,7 +589,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   </div>
   <div class="metrics" id="metrics"></div>
   <!-- Mobile month quick-select pills + count -->
-  <div id="mob-filter-bar" style="display:none;padding:5px 0.75rem 4px;display:flex;align-items:center;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+  <div id="mob-filter-bar" style="padding:5px 0.75rem 4px;align-items:center;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;max-width:100vw;box-sizing:border-box">
     <!-- Pin/location quick button -->
     <button id="mob-pin-btn" onclick="sortByNearest()" title="Sort by nearest" style="font-family:var(--sans);flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,0,0,.12);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:0">
       <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" id="mob-pin-icon">
@@ -2943,14 +2943,17 @@ function renderActivityChart(){
   const el=document.getElementById('reports-content');
   if(!el) return;
 
-  // Build a map of date → count from testLog entries only (real Pass/Fail/Repaired/Decommissioned)
+  // Only count testLog entries with a real result AND a tester name
+  // This excludes any auto-saves or edits that don't record a test
   const validResults=['Pass','Fail','Repaired','Decommissioned'];
   const dateCounts={};
+  const testerCounts={};
   devices.forEach(d=>{
     if(d.testLog&&d.testLog.length){
       d.testLog.forEach(entry=>{
-        if(entry.date&&validResults.includes(entry.result)){
+        if(entry.date&&entry.result&&validResults.includes(entry.result)&&entry.tester&&entry.tester!=='Unknown'){
           dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
+          testerCounts[entry.tester]=(testerCounts[entry.tester]||0)+1;
         }
       });
     }
@@ -2996,16 +2999,7 @@ function renderActivityChart(){
     </div>`;
   }).join('');
 
-  // Group by tester
-  const byTester={};
-  devices.forEach(d=>{
-    if(d.testLog){
-      d.testLog.forEach(e=>{
-        if(e.tester) byTester[e.tester]=(byTester[e.tester]||0)+1;
-      });
-    }
-  });
-  const testerRows=Object.entries(byTester).sort((a,b)=>b[1]-a[1])
+  const testerRows=Object.entries(testerCounts).sort((a,b)=>b[1]-a[1])
     .map(([name,count])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2);font-size:13px">
       <span>${name}</span><strong>${count}</strong>
     </div>`).join('');
@@ -4607,13 +4601,26 @@ function backupData(){
     activeClientId:getActiveClientId(),
     users:getUsers(),
     devices:{},
+    settings:getSettings(),
+    templates:getTemplates(),
   };
-  // Save devices for every client
+  // Save devices for every client — use both client ID and storage key mapping
   const clients=getClients();
   clients.forEach(c=>{
     const key=deviceKeyForClient(c.id);
-    try{backup.devices[c.id]=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){backup.devices[c.id]=[];}
+    try{
+      const stored=localStorage.getItem(key);
+      // Also check the default key directly as fallback
+      const fallback=localStorage.getItem('fp_devices_v1');
+      const devs=JSON.parse(stored||fallback||'[]');
+      backup.devices[c.id]=devs;
+    }catch(e){backup.devices[c.id]=[];}
   });
+  // Always include current in-memory devices under active client
+  const activeId=getActiveClientId();
+  if(devices&&devices.length>0){
+    backup.devices[activeId]=devices;
+  }
   const json=JSON.stringify(backup,null,2);
   const blob=new Blob([json],{type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -4622,7 +4629,7 @@ function backupData(){
   a.href=url;a.download=`${APP_NAME}_backup_${date}.json`;
   document.body.appendChild(a);a.click();
   document.body.removeChild(a);URL.revokeObjectURL(url);
-  showToast('Backup downloaded.');
+  showToast('Backup downloaded — '+devices.length+' devices saved.');
 }
 
 function restoreFileSelected(input){

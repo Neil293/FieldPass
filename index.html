@@ -2952,7 +2952,9 @@ function renderActivityChart(){
   devices.forEach(d=>{
     if(d.testLog&&d.testLog.length){
       d.testLog.forEach(entry=>{
-        if(entry.date&&entry.result&&validResults.includes(entry.result)&&entry.tester&&entry.tester!=='Unknown'&&entry.tester!=='Developer'){
+        // Exclude dev account entries and unknown testers
+        const isDevEntry=entry.testerUsername===DEV_USERNAME||entry.tester==='Developer'||entry.tester==='Unknown'||!entry.tester;
+        if(entry.date&&entry.result&&validResults.includes(entry.result)&&!isDevEntry){
           dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
           testerCounts[entry.tester]=(testerCounts[entry.tester]||0)+1;
           debugEntries.push({date:entry.date,result:entry.result,tester:entry.tester,device:`${d.make} ${d.model} S/N:${d.serial}`});
@@ -3503,7 +3505,7 @@ function saveTest(){
   // Add to test log
   if(d.testDate&&d.testResult!=='Pending'){
     if(!d.testLog)d.testLog=[];
-    const entry={date:d.testDate,result:d.testResult,tester:currentUser?currentUser.name:'Unknown',notes:d.notes,ts:Date.now()};
+    const entry={date:d.testDate,result:d.testResult,tester:currentUser?currentUser.name:'Unknown',testerUsername:currentUser?currentUser.username:'',notes:d.notes,ts:Date.now()};
     // Only add if it's a new entry (different date or first entry)
     const last=d.testLog[d.testLog.length-1];
     if(!last||last.date!==entry.date||last.result!==entry.result){d.testLog.push(entry);}

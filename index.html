@@ -309,6 +309,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   #add-modal .modal,
   #wizard-modal .modal{
     max-height:calc(100dvh - 52px);
+    height:calc(100dvh - 52px);
   }
 
   /* ── Settings modal — full height with tabs ── */
@@ -5601,7 +5602,7 @@ function generateQR(url, deviceName){
   </div>
 </div>
 
-<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:1rem">
+<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:1rem">
   <div style="background:var(--surface);border-radius:16px;padding:20px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.4)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div style="font-weight:600;font-size:15px">Scan Backflow ID QR Code</div>

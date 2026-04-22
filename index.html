@@ -1059,6 +1059,13 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
             <div style="font-size:12px;color:var(--text3);margin-top:2px">Saves your current GPS position each time you record a Pass, Fail, Repaired or Decommissioned result — useful for syncing your phone's location to desktop</div>
           </div>
         </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-copy-serial" onchange="saveSetting('copySerialOnRecord',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Copy serial number when recording</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Automatically copies the serial number to clipboard when you tap Pass, Fail, Repaired or Decommissioned</div>
+          </div>
+        </label>
 
       </div>
       <!-- Map pin colours -->
@@ -3273,6 +3280,13 @@ function markTestedToday(result){
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('f-date').value=today;
   document.getElementById('f-result2').value=result||'Pass';
+  // Copy serial number to clipboard if setting enabled
+  const serial=(document.getElementById('e-serial')||{}).value||'';
+  if(serial&&navigator.clipboard&&getSetting('copySerialOnRecord',true)){
+    navigator.clipboard.writeText(serial).then(()=>{
+      showToast('📋 Serial '+serial+' copied');
+    }).catch(()=>{});
+  }
   if(result==='Fail'){
     showFailNotesPopup();
   } else if(result==='Repaired'){
@@ -3435,6 +3449,8 @@ function loadSettingsCheckboxes(){
   if(el3) el3.checked=getSetting('followBackflowUrl',false);
   const el4=document.getElementById('setting-auto-update-gps');
   if(el4) el4.checked=getSetting('autoUpdateGps',false);
+  const el5=document.getElementById('setting-copy-serial');
+  if(el5) el5.checked=getSetting('copySerialOnRecord',true);
   syncIntervalUI();
 }
 

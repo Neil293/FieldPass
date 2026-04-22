@@ -2943,24 +2943,18 @@ function renderActivityChart(){
   const el=document.getElementById('reports-content');
   if(!el) return;
 
-  // Exclude entries made by the developer account
+  // Use the current testDate on each device — one record per device
+  // This is the date the physical test was actually performed
   const validResults=['Pass','Fail','Repaired','Decommissioned'];
   const dateCounts={};
   const testerCounts={};
   const debugEntries=[];
   devices.forEach(d=>{
-    if(d.testLog&&d.testLog.length){
-      d.testLog.forEach(entry=>{
-        if(entry.date&&entry.result&&validResults.includes(entry.result)){
-          const tname=entry.tester||'';
-          const tuser=entry.testerUsername||'';
-          // Skip dev account — by username, name, or isDeveloper flag
-          if(tuser==='dev'||tname==='Developer'||!tname||tname==='Unknown') return;
-          dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
-          testerCounts[tname]=(testerCounts[tname]||0)+1;
-          debugEntries.push({date:entry.date,result:entry.result,tester:tname,device:`${d.make} ${d.model} S/N:${d.serial}`});
-        }
-      });
+    if(d.testDate&&d.testResult&&validResults.includes(d.testResult)){
+      dateCounts[d.testDate]=(dateCounts[d.testDate]||0)+1;
+      const t=d.testResult;
+      testerCounts[t]=(testerCounts[t]||0)+1;
+      debugEntries.push({date:d.testDate,result:d.testResult,tester:'',device:`${d.make} ${d.model} S/N:${d.serial}`});
     }
   });
 
@@ -3005,8 +2999,8 @@ function renderActivityChart(){
   }).join('');
 
   const testerRows=Object.entries(testerCounts).sort((a,b)=>b[1]-a[1])
-    .map(([name,count])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2);font-size:13px">
-      <span>${name}</span><strong>${count}</strong>
+    .map(([result,count])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2);font-size:13px">
+      <span>${result}</span><strong>${count}</strong>
     </div>`).join('');
 
   el.innerHTML=`
@@ -3040,7 +3034,7 @@ function renderActivityChart(){
 
     <!-- By tester -->
     ${testerRows?`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Tests by tester</div>
+      <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Results breakdown</div>
       ${testerRows}
     </div>`:''}
     <div style="background:#f0f0f8;border:1px solid rgba(26,26,46,.2);border-radius:12px;padding:16px">

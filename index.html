@@ -2943,21 +2943,25 @@ function renderActivityChart(){
   const el=document.getElementById('reports-content');
   if(!el) return;
 
-  // Only count testLog entries with a real result AND a tester name
-  // This excludes any auto-saves or edits that don't record a test
+  // Count by actual recorded test date
+  // Exclude entries made by the developer account (testing/demo activity)
+  const devUsernames=getUsers().filter(u=>u.isDeveloper||u.username===DEV_USERNAME).map(u=>u.name);
   const validResults=['Pass','Fail','Repaired','Decommissioned'];
   const dateCounts={};
   const testerCounts={};
-  const debugEntries=[]; // for dev debugging
+  const debugEntries=[];
   devices.forEach(d=>{
     if(d.testLog&&d.testLog.length){
       d.testLog.forEach(entry=>{
-        // Exclude dev account entries and unknown testers
-        const isDevEntry=entry.testerUsername===DEV_USERNAME||entry.tester==='Developer'||entry.tester==='Unknown'||!entry.tester;
-        if(entry.date&&entry.result&&validResults.includes(entry.result)&&!isDevEntry){
+        if(entry.date&&entry.result&&validResults.includes(entry.result)){
+          // Skip dev account entries
+          const isDevEntry=devUsernames.includes(entry.tester)||
+            (entry.testerUsername&&entry.testerUsername===DEV_USERNAME);
+          if(isDevEntry) return;
           dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
-          testerCounts[entry.tester]=(testerCounts[entry.tester]||0)+1;
-          debugEntries.push({date:entry.date,result:entry.result,tester:entry.tester,device:`${d.make} ${d.model} S/N:${d.serial}`});
+          const t=entry.tester||'Unknown';
+          testerCounts[t]=(testerCounts[t]||0)+1;
+          debugEntries.push({date:entry.date,result:entry.result,tester:t,device:`${d.make} ${d.model} S/N:${d.serial}`});
         }
       });
     }

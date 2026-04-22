@@ -2943,9 +2943,7 @@ function renderActivityChart(){
   const el=document.getElementById('reports-content');
   if(!el) return;
 
-  // Count by actual recorded test date
-  // Exclude entries made by the developer account (testing/demo activity)
-  const devUsernames=getUsers().filter(u=>u.isDeveloper||u.username===DEV_USERNAME).map(u=>u.name);
+  // Exclude entries made by the developer account
   const validResults=['Pass','Fail','Repaired','Decommissioned'];
   const dateCounts={};
   const testerCounts={};
@@ -2954,14 +2952,13 @@ function renderActivityChart(){
     if(d.testLog&&d.testLog.length){
       d.testLog.forEach(entry=>{
         if(entry.date&&entry.result&&validResults.includes(entry.result)){
-          // Skip dev account entries
-          const isDevEntry=devUsernames.includes(entry.tester)||
-            (entry.testerUsername&&entry.testerUsername===DEV_USERNAME);
-          if(isDevEntry) return;
+          const tname=entry.tester||'';
+          const tuser=entry.testerUsername||'';
+          // Skip dev account — by username, name, or isDeveloper flag
+          if(tuser==='dev'||tname==='Developer'||!tname||tname==='Unknown') return;
           dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
-          const t=entry.tester||'Unknown';
-          testerCounts[t]=(testerCounts[t]||0)+1;
-          debugEntries.push({date:entry.date,result:entry.result,tester:t,device:`${d.make} ${d.model} S/N:${d.serial}`});
+          testerCounts[tname]=(testerCounts[tname]||0)+1;
+          debugEntries.push({date:entry.date,result:entry.result,tester:tname,device:`${d.make} ${d.model} S/N:${d.serial}`});
         }
       });
     }

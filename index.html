@@ -56,7 +56,7 @@ try {
 <style>
 :root{--bg:#f2f1ed;--surface:#fff;--surface2:#f0efe9;--border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.05);--text:#1c1c1a;--text2:#666660;--text3:#9c9c94;--accent:#1a4d6e;--accent-light:#e6f0f7;--red:#b83232;--red-bg:#fdf0f0;--amber:#a05a00;--amber-bg:#fef6e6;--green:#1a6636;--green-bg:#eaf4ee;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--r:10px;--rl:16px}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;overflow-x:hidden}
 nav{background:var(--accent);color:#fff;padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;gap:12px}
 .nav-brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-0.01em;white-space:nowrap}
 .nav-icon{width:28px;height:28px;background:rgba(255,255,255,0.18);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -1252,7 +1252,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     </button>
   </div>
   <!-- Report content -->
-  <div id="reports-content" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem"></div>
+  <div id="reports-content" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:1rem;max-width:100%"></div>
 </div>
 
 <!-- Custom confirm dialog -->
@@ -3033,8 +3033,8 @@ function renderActivityChart(){
     </div>
 
     <!-- Bar chart -->
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:1.25rem;overflow-x:auto">
-      <div style="display:flex;align-items:flex-end;gap:2px;min-width:${recent.length*barWidth}px;padding-bottom:28px">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:1.25rem;overflow-x:auto;max-width:100%">
+      <div style="display:flex;align-items:flex-end;gap:2px;min-width:${recent.length*barWidth}px;padding-bottom:28px;width:max-content">
         ${bars}
       </div>
     </div>

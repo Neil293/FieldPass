@@ -2035,6 +2035,16 @@ function statusBadge(d){
   return map[s]||map.pending;
 }
 
+// Returns today's date as YYYY-MM-DD in LOCAL time (not UTC)
+// Fixes timezone issue where UTC date differs from Australian local date
+function localDateStr(d){
+  const dt=d||new Date();
+  const y=dt.getFullYear();
+  const m=String(dt.getMonth()+1).padStart(2,'0');
+  const day=String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
 function fmtDate(d){
   if(!d)return'<span style="color:var(--text3)">Not tested</span>';
   const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;
@@ -2367,7 +2377,7 @@ function openDevice(id){
   document.getElementById('m-sub').textContent=`${d.suburb}${d.scheduledMonth?' — Scheduled: '+d.scheduledMonth:''}`;
 
   // Tested today button
-  const today=new Date().toISOString().slice(0,10);
+  const today=localDateStr();
   const isComplete=getStatus(d)==='complete';
   const canRecord=can('recordTests');
   let barHtml='';
@@ -2943,18 +2953,29 @@ function renderActivityChart(){
   const el=document.getElementById('reports-content');
   if(!el) return;
 
-  // Use the current testDate on each device — one record per device
-  // This is the date the physical test was actually performed
+  // Use manually entered test dates from testLog history
+  // entry.date is always what the user typed on the form — correct regardless of timezone
+  // Also include the current testDate on each device for devices with no log
   const validResults=['Pass','Fail','Repaired','Decommissioned'];
   const dateCounts={};
-  const testerCounts={};
+  const resultCounts={};
   const debugEntries=[];
+
   devices.forEach(d=>{
-    if(d.testDate&&d.testResult&&validResults.includes(d.testResult)){
+    if(d.testLog&&d.testLog.length){
+      // Use full history from testLog
+      d.testLog.forEach(entry=>{
+        if(entry.date&&entry.result&&validResults.includes(entry.result)){
+          dateCounts[entry.date]=(dateCounts[entry.date]||0)+1;
+          resultCounts[entry.result]=(resultCounts[entry.result]||0)+1;
+          debugEntries.push({date:entry.date,result:entry.result,device:`${d.make} ${d.model} S/N:${d.serial}`});
+        }
+      });
+    } else if(d.testDate&&d.testResult&&validResults.includes(d.testResult)){
+      // No log — fall back to current testDate on device
       dateCounts[d.testDate]=(dateCounts[d.testDate]||0)+1;
-      const t=d.testResult;
-      testerCounts[t]=(testerCounts[t]||0)+1;
-      debugEntries.push({date:d.testDate,result:d.testResult,tester:'',device:`${d.make} ${d.model} S/N:${d.serial}`});
+      resultCounts[d.testResult]=(resultCounts[d.testResult]||0)+1;
+      debugEntries.push({date:d.testDate,result:d.testResult,device:`${d.make} ${d.model} S/N:${d.serial}`});
     }
   });
 
@@ -2988,7 +3009,7 @@ function renderActivityChart(){
   const bars=recent.map(date=>{
     const count=dateCounts[date];
     const barH=Math.round((count/max)*chartH);
-    const isToday=date===new Date().toISOString().slice(0,10);
+    const isToday=date===localDateStr();
     return`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:${barWidth}px;max-width:${barWidth+10}px">
       <div style="font-size:10px;color:var(--accent);font-weight:700;min-height:14px">${count>0?count:''}</div>
       <div style="width:100%;display:flex;align-items:flex-end;height:${chartH}px">
@@ -2998,7 +3019,7 @@ function renderActivityChart(){
     </div>`;
   }).join('');
 
-  const testerRows=Object.entries(testerCounts).sort((a,b)=>b[1]-a[1])
+  const testerRows=Object.entries(resultCounts).sort((a,b)=>b[1]-a[1])
     .map(([result,count])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2);font-size:13px">
       <span>${result}</span><strong>${count}</strong>
     </div>`).join('');
@@ -3040,7 +3061,7 @@ function renderActivityChart(){
     <div style="background:#f0f0f8;border:1px solid rgba(26,26,46,.2);border-radius:12px;padding:16px">
       <div style="font-size:12px;font-weight:600;color:#1a1a2e;margin-bottom:8px">🛠 Debug — all counted entries (${debugEntries.length})</div>
       <div style="font-size:11px;font-family:var(--mono);color:var(--text2);max-height:200px;overflow-y:auto;line-height:1.8">
-        ${debugEntries.sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<div>${e.date} · ${e.result} · ${e.tester} · ${e.device}</div>`).join('')||'<div style="color:var(--text3)">No entries found</div>'}
+        ${debugEntries.sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<div>${e.date} · ${e.result} · ${e.device}</div>`).join('')||'<div style="color:var(--text3)">No entries found</div>'}
       </div>
     </div>`;
 }
@@ -3380,7 +3401,7 @@ function markDecommissioned(){
   ctConfirm(
     'Mark this device as decommissioned? This will record it as no longer in use.',
     ()=>{
-      const today=new Date().toISOString().slice(0,10);
+      const today=localDateStr();
       document.getElementById('f-date').value=today;
       document.getElementById('f-result2').value='Decommissioned';
       saveTest();
@@ -3390,7 +3411,7 @@ function markDecommissioned(){
 }
 
 function markTestedToday(result){
-  const today=new Date().toISOString().slice(0,10);
+  const today=localDateStr();
   document.getElementById('f-date').value=today;
   document.getElementById('f-result2').value=result||'Pass';
   // Copy serial number to clipboard if setting enabled

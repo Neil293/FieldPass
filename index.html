@@ -2335,7 +2335,7 @@ function deviceRow(d,hideSuburb){
   const distLabel=d._dist!=null
     ?`<span style="font-size:10px;color:var(--accent);font-weight:600;background:var(--accent-light);padding:1px 6px;border-radius:10px;white-space:nowrap">${d._dist<1?(d._dist*1000).toFixed(0)+'m':d._dist.toFixed(1)+'km'}</span>`
     :'';
-  return`<tr class="${rowClass}" onclick="openDevice(${d.id})">`+
+  return`<tr class="${rowClass}" onclick="${d.id!=null?`openDevice(${d.id})`:''}">`+
     `<td><a href="${url}" target="_blank" class="map-btn${hasGps?'':' no-gps'}" onclick="event.stopPropagation()">
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 0.5C3.07 0.5 1.5 2.07 1.5 4c0 2.5 3.5 6 3.5 6s3.5-3.5 3.5-6C8.5 2.07 6.93 0.5 5 0.5z" fill="currentColor" opacity=".8"/><circle cx="5" cy="4" r="1.2" fill="white"/></svg>
       ${hasGps?'GPS':'Maps'}
@@ -3850,7 +3850,7 @@ function saveAdd(){
   const model=document.getElementById('a-model-sel').value.trim()||document.getElementById('a-model').value.trim();
   const size=document.getElementById('a-size-sel').value.trim()||document.getElementById('a-size').value.trim();
   if(!suburb||!make){showToast('Suburb and make are required.');return;}
-  const maxId=devices.reduce((m,d)=>Math.max(m,d.id),0);
+  const maxId=devices.reduce((m,d)=>Math.max(m,d.id||0),0);
   const lat=parseFloat(document.getElementById('a-lat').value);
   const lng=parseFloat(document.getElementById('a-lng').value);
   devices.push({

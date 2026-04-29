@@ -1992,7 +1992,7 @@ function populateYearFilter(){
 
 function mapsUrl(d){
   if(d.lat&&d.lng)return`https://www.google.com/maps?q=${d.lat},${d.lng}`;
-  return'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(d.location+' NSW Australia');
+  return'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((d.location||'unknown')+' NSW Australia');
 }
 
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -2469,7 +2469,7 @@ function openDevice(id){
   document.getElementById('m-loc-text').textContent=d.location;
   document.getElementById('m-map-link').href=mapsUrl(d);
   // Generate QR code for map link
-  setTimeout(()=>generateQR(mapsUrl(d),d.suburb+' — '+d.location.slice(0,40)),50);
+  setTimeout(()=>generateQR(mapsUrl(d),(d.suburb||'')+' — '+(d.location||'').slice(0,40)),50);
 
   // Populate editable fields
   document.getElementById('e-suburb').value=d.suburb||'';
@@ -2498,6 +2498,12 @@ function openDevice(id){
   const missing=getMissingFields(d);
   if(missing.length>0 && getSetting('promptMissing',true)){
     setTimeout(()=>startWizard(d.id,missing),300);
+  }
+  }catch(err){
+    console.error('openDevice error:',err);
+    // Still try to show the modal even if something failed
+    try{document.getElementById('modal').style.display='flex';document.body.classList.add('modal-open');}catch(e){}
+    showToast('Error opening device — check console');
   }
 }
 
@@ -4217,19 +4223,20 @@ function resetDevPassword(e){
 function resetAdminAccount(e){
   if(e)e.preventDefault();
   const adminPerms={recordTests:true,editDevices:true,addDevices:true,viewHistory:true,exportCSV:true,manageUsers:true};
-  // Wipe ALL users and recreate only admin
-  localStorage.setItem('fp_users_v1',JSON.stringify([
-    {username:'admin',password:hashPass('admin123'),name:'Administrator',permissions:adminPerms}
-  ]));
-  const err=document.getElementById('login-err');
-  err.style.display='block';
-  err.style.background='#eaf4ee';
-  err.style.color='#1a6636';
-  err.style.border='1px solid rgba(26,102,54,.2)';
-  err.textContent='✓ All accounts reset. Log in: admin / admin123';
-  document.getElementById('login-user').value='admin';
-  document.getElementById('login-pass').value='';
-  document.getElementById('login-pass').focus();
+  hashPassAsync('admin123').then(h=>{
+    localStorage.setItem('fp_users_v1',JSON.stringify([
+      {username:'admin',password:h,name:'Administrator',permissions:adminPerms}
+    ]));
+    const err=document.getElementById('login-err');
+    err.style.display='block';
+    err.style.background='#eaf4ee';
+    err.style.color='#1a6636';
+    err.style.border='1px solid rgba(26,102,54,.2)';
+    err.textContent='✓ All accounts reset. Log in: admin / admin123';
+    document.getElementById('login-user').value='admin';
+    document.getElementById('login-pass').value='';
+    document.getElementById('login-pass').focus();
+  });
 }
 
 function initUsers(){
@@ -4294,9 +4301,8 @@ async function doLogin(){
 
   // Legacy hash match — auto-upgrade to SHA-256
   if(!user){
-    const legacyUser=users.find(u=>u.username.toLowerCase()===username&&u.password===legacy);
+    const legacyUser=users.find(u=>u.username.toLowerCase()===username&&(u.password===legacy||u.password===password));
     if(legacyUser){
-      // Upgrade hash silently
       const idx=users.indexOf(legacyUser);
       users[idx].password=sha256;
       saveUsers(users);

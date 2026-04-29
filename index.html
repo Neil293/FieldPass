@@ -2373,8 +2373,8 @@ function openDevice(id){
   const d=devices.find(x=>x.id===id);
   if(!d)return;
   editId=id;
-  document.getElementById('m-title').textContent=`${d.make} ${d.model}`;
-  document.getElementById('m-sub').textContent=`${d.suburb}${d.scheduledMonth?' — Scheduled: '+d.scheduledMonth:''}`;
+  document.getElementById('m-title').textContent=`${d.make||'New Device'} ${d.model||''}`.trim();
+  document.getElementById('m-sub').textContent=`${d.suburb||'No suburb'}${d.scheduledMonth?' — Scheduled: '+d.scheduledMonth:''}`;
 
   // Tested today button
   const today=localDateStr();
@@ -2383,7 +2383,8 @@ function openDevice(id){
   let barHtml='';
   const currentStatus=getStatus(d);
   if(currentStatus==='complete'||currentStatus==='failed'||currentStatus==='repaired'||currentStatus==='decommissioned'){
-    const[y,m,day]=d.testDate.split('-');
+    const dateStr=d.testDate||'';
+    const[y,m,day]=dateStr?dateStr.split('-'):['','',''];
     const colours={
       'Pass':    {bg:'var(--green-bg)',   colour:'var(--green)',   border:'rgba(26,102,54,.2)'},
       'Fail':    {bg:'var(--red-bg)',     colour:'var(--red)',     border:'rgba(184,50,50,.2)'},

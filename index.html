@@ -2370,6 +2370,7 @@ function _forceModalWidth(){
   }
 }
 function openDevice(id){
+  try{
   const d=devices.find(x=>x.id===id);
   if(!d)return;
   editId=id;
@@ -2423,7 +2424,7 @@ function openDevice(id){
   document.getElementById('m-info').innerHTML=`
     <div class="info-item"><div class="ilabel">Serial no.</div><div class="ival mono">${d.serial||'—'}</div></div>
     <div class="info-item"><div class="ilabel">Size</div><div class="ival">${d.size?d.size+' mm':'—'}</div></div>
-    <div class="info-item"><div class="ilabel">GPS</div><div class="ival mono" style="font-size:11px">${d.lat?d.lat.toFixed(4)+', '+d.lng.toFixed(4):'No GPS'}</div></div>
+    <div class="info-item"><div class="ilabel">GPS</div><div class="ival mono" style="font-size:11px">${(d.lat&&d.lng)?d.lat.toFixed(4)+', '+d.lng.toFixed(4):'No GPS'}</div></div>
     ${lastLog?`<div class="info-item" style="grid-column:1/-1"><div class="ilabel">Last tested by</div><div class="ival">${lastLog.tester} &mdash; ${fmtDate(lastLog.date)} &mdash; <span style="color:${lastLog.result==='Pass'?'var(--green)':'var(--red)'};font-weight:500">${lastLog.result}</span></div></div>`:''}
   `;
 

@@ -1020,6 +1020,8 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
             Sign out
           </button>
         </div>
+        <!-- Version -->
+        <div style="text-align:center;padding-top:1rem;font-size:11px;color:var(--text3)" id="app-version-footer"></div>
 
       </div>
     </div>
@@ -1284,6 +1286,10 @@ const SCC_CLIENT_ID='default';
 
 // ── App name — change this one line to rename the app everywhere ──
 const APP_NAME='FieldPass';
+
+// ── App version — update with each release ──
+const APP_VERSION='1.4.0';
+const APP_VERSION_DATE='2026-05-01';
 
 // ── Client helpers ─────────────────────────────────────
 function getClients(){
@@ -5005,7 +5011,7 @@ function renderDeveloperPanel(){
   const ls=document.getElementById('dev-last-sync');
   if(ls) ls.textContent=window._lastSyncTs?new Date(window._lastSyncTs).toLocaleTimeString():'Never this session';
   const an=document.getElementById('dev-app-name');
-  if(an) an.textContent=APP_NAME;
+  if(an) an.textContent=APP_NAME+' v'+APP_VERSION+' ('+APP_VERSION_DATE+')';
 
   // Render impersonation user list
   const impEl=document.getElementById('impersonation-user-list');
@@ -5038,6 +5044,8 @@ function openSettings(tab){
   // Show developer tab only for dev account
   const devTab=document.getElementById('stab-developer');
   if(devTab) devTab.style.display=isDev()?'block':'none';
+  const vf=document.getElementById('app-version-footer');
+  if(vf) vf.textContent=APP_NAME+' v'+APP_VERSION+' · '+APP_VERSION_DATE;
   switchSettingsTab(tab||'users');
   document.getElementById('user-modal').style.display='flex';
   document.body.classList.add('modal-open');
@@ -5827,30 +5835,52 @@ function openQRLookup(){
 }
 
 function handleQRLookupResult(scanned){
-  // Find all devices matching this backflowId
   const val=scanned.trim();
   const matches=devices.filter(d=>d.backflowId&&d.backflowId.trim()===val);
 
   closeQRScanner();
 
   if(matches.length===0){
-    // Not found — offer to copy the value
     ctConfirm(
       `No device found with Backflow ID:\n\n"${val.slice(0,80)}${val.length>80?'…':''}"\n\nThis ID is not assigned to any device yet.`,
       ()=>{ navigator.clipboard&&navigator.clipboard.writeText(val); showToast('ID copied to clipboard'); },
       'Not Found', 'Copy ID', false
     );
   } else if(matches.length===1){
-    // Exactly one match — open it
     showToast('✓ Device found');
     setTimeout(()=>openDevice(matches[0].id), 200);
+  } else if(matches.length===2){
+    // Two devices on same tag — show clean selection prompt
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:0';
+    overlay.innerHTML=`
+      <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:1.5rem 1.25rem max(1.5rem,env(safe-area-inset-bottom));width:100%;max-width:520px;box-shadow:0 -8px 32px rgba(0,0,0,.2)">
+        <div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 1.25rem"></div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Select Device</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:1.25rem">2 devices share this Backflow ID — which one are you working on?</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${matches.map(d=>`
+            <button onclick="window._pickDevice(${d.id})" style="font-family:var(--sans);text-align:left;padding:14px;border-radius:12px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;width:100%">
+              <div style="font-size:14px;font-weight:600;color:var(--text)">${d.make||'Unknown'} ${d.model||''} ${d.size?'· '+d.size+'mm':''}</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:3px">S/N: ${d.serial||'—'}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.location||d.suburb||'No location'}</div>
+              <div style="font-size:11px;color:var(--accent);margin-top:3px;font-weight:500">${d.suburb||''} · ${d.scheduledMonth||'No month'}</div>
+            </button>`).join('')}
+          <button onclick="window._pickDevice(null)" style="font-family:var(--sans);padding:12px;border-radius:12px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:13px;width:100%">Cancel</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    window._pickDevice=function(id){
+      document.body.removeChild(overlay);
+      delete window._pickDevice;
+      if(id!=null){showToast('✓ Device found');setTimeout(()=>openDevice(id),200);}
+    };
   } else {
-    // Multiple matches — show error with affected devices
-    const list=matches.map(d=>`• ${d.make} ${d.model} — ${d.suburb} — ${d.location.slice(0,50)}`).join('\n');
+    // More than 2 — show error
+    const list=matches.map(d=>`• ${d.make||'?'} ${d.model||'?'} — ${d.suburb||'?'} — ${(d.location||'').slice(0,50)}`).join('\n');
     ctConfirm(
-      `⚠️ This Backflow ID is assigned to ${matches.length} devices:\n\n${list}\n\nEach device should have a unique Backflow ID. Please edit the affected devices to fix this.`,
-      ()=>{},
-      'Duplicate Backflow ID', 'OK', true
+      `⚠️ This Backflow ID is assigned to ${matches.length} devices:\n\n${list}\n\nTags should have at most 2 devices. Please check your data.`,
+      ()=>{},'Too Many Matches','OK',true
     );
   }
 }

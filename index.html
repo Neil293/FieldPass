@@ -3850,11 +3850,11 @@ function saveAdd(){
   const model=document.getElementById('a-model-sel').value.trim()||document.getElementById('a-model').value.trim();
   const size=document.getElementById('a-size-sel').value.trim()||document.getElementById('a-size').value.trim();
   if(!suburb||!make){showToast('Suburb and make are required.');return;}
-  const maxId=devices.reduce((m,d)=>Math.max(m,d.id||0),0);
+  const newId=Date.now();
   const lat=parseFloat(document.getElementById('a-lat').value);
   const lng=parseFloat(document.getElementById('a-lng').value);
   devices.push({
-    id:maxId+1,suburb,make,clientId:getActiveClientId(),
+    id:newId,suburb,make,clientId:getActiveClientId(),
     model,
     size,
     serial:document.getElementById('a-serial').value.trim(),

@@ -1288,8 +1288,8 @@ const SCC_CLIENT_ID='default';
 const APP_NAME='FieldPass';
 
 // ── App version — update with each release ──
-const APP_VERSION='1.4.0';
-const APP_VERSION_DATE='2026-05-01';
+const APP_VERSION='1.5.0';
+const APP_VERSION_DATE='2026-05-04';
 
 // ── Client helpers ─────────────────────────────────────
 function getClients(){
@@ -2404,7 +2404,9 @@ function openDevice(id){
       ${d.testResult} — ${day}/${m}/${y}${canRecord?' &mdash; tap to undo':''}
     </button>`;
   } else if(canRecord){
+    const isFailed=currentStatus==='failed';
     barHtml=`<div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${!isFailed?`
       <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:var(--green)" onclick="markTestedToday('Pass')">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8l5 5 7-8" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Pass
@@ -2412,7 +2414,7 @@ function openDevice(id){
       <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:var(--red)" onclick="markTestedToday('Fail')">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Fail
-      </button>
+      </button>`:''}
       <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:#1976d2" onclick="markTestedToday('Repaired')">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13 3l-2-2-7 7-1 3 3-1 7-7zM10 1l2 2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 14h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
         Repaired
@@ -2421,6 +2423,11 @@ function openDevice(id){
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.8"/><path d="M5 8h6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
         Decommissioned
       </button>
+      ${isFailed?`
+      <button class="btn-tested" style="flex:1;min-width:100%;background:var(--red);opacity:.7" onclick="markTestedToday('Fail')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Re-record Fail
+      </button>`:''}
     </div>`;
   }
   document.getElementById('m-tested-bar').innerHTML=barHtml;
@@ -4941,6 +4948,7 @@ function renderMapLegend(){
     {key:'upcoming',label:'Upcoming'},
     {key:'pending', label:'No date'},
     {key:'failed',  label:'Failed'},
+    {key:'repaired',label:'Repaired'},
     {key:'complete',label:'Completed'},
   ];
   el.innerHTML=`<span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Legend:</span>`+
@@ -4957,7 +4965,8 @@ function renderInlineColourPickers(){
   const colours=getMapColours();
   const labels={
     overdue:'Overdue', due:'Due this month', due_next:'Next month',
-    upcoming:'Upcoming', pending:'No date', complete:'Completed', failed:'Failed'
+    upcoming:'Upcoming', pending:'No date', complete:'Completed',
+    failed:'Failed', repaired:'Repaired'
   };
   el.innerHTML=Object.entries(labels).map(([key,label])=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)">
@@ -5444,7 +5453,8 @@ const MAP_COLOURS_DEFAULT={
   upcoming:'#64b5f6',
   pending:'#888888',
   complete:'#27ae60',
-  failed:'#c0392b'
+  failed:'#c0392b',
+  repaired:'#1565c0'
 };
 
 function getMapColours(){

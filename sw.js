@@ -1,5 +1,5 @@
 // ComplyTrack Service Worker — offline support
-const CACHE_NAME = 'fieldpass-v8';
+const CACHE_NAME = 'fieldpass-v9';
 const TILE_CACHE = 'complytrack-tiles-v1';
 
 // App shell files to cache on install

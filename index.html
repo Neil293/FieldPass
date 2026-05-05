@@ -1224,7 +1224,15 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <svg width="16" height="16" viewBox="0 0 15 15" fill="none"><rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="white" stroke-width="1.4"/><path d="M5 5h5M5 7.5h5M5 10h3" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
       Reports
     </div>
-    <button onclick="closeReports()" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center">&#x2715;</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <!-- Year selector -->
+      <div style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:3px 8px">
+        <button onclick="changeReportYear(-1)" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px;padding:0 2px;line-height:1">‹</button>
+        <span id="report-year-label" style="font-size:13px;font-weight:600;color:#fff;min-width:36px;text-align:center"></span>
+        <button onclick="changeReportYear(1)" id="report-year-next" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px;padding:0 2px;line-height:1">›</button>
+      </div>
+      <button onclick="closeReports()" style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center">&#x2715;</button>
+    </div>
   </div>
   <!-- Report tabs -->
   <div style="background:var(--accent);display:flex;gap:0;border-top:1px solid rgba(255,255,255,.15);flex-shrink:0;overflow-x:auto;scrollbar-width:none">
@@ -1288,8 +1296,8 @@ const SCC_CLIENT_ID='default';
 const APP_NAME='FieldPass';
 
 // ── App version — update with each release ──
-const APP_VERSION='1.5.1';
-const APP_VERSION_DATE='2026-05-04';
+const APP_VERSION='1.6.2';
+const APP_VERSION_DATE='2026-05-05';
 
 // ── Client helpers ─────────────────────────────────────
 function getClients(){
@@ -2004,14 +2012,18 @@ function mapsUrl(d){
 const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function getStatus(d){
+  return getStatusForYear(d, new Date().getFullYear());
+}
+
+function getStatusForYear(d, year){
   const now=new Date();
   const currentYear=now.getFullYear();
-  const currentMonth=now.getMonth(); // 0-indexed
+  const currentMonth=now.getMonth();
   if(d.testDate){
     const ty=parseInt(d.testDate.slice(0,4));
     if(d.testResult==='Decommissioned') return'decommissioned';
-    if(d.testResult==='Repaired') return'repaired';
-    if(ty===currentYear){
+    if(d.testResult==='Repaired'&&ty===year) return'repaired';
+    if(ty===year){
       if(d.testResult==='Fail') return'failed';
       return'complete';
     }
@@ -2019,6 +2031,8 @@ function getStatus(d){
   if(!d.scheduledMonth) return'pending';
   const schedIdx=MONTH_NAMES.findIndex(m=>m===d.scheduledMonth);
   if(schedIdx===-1) return'pending';
+  // For past years — all unrecorded are overdue
+  if(year<currentYear) return'overdue';
   if(currentMonth>schedIdx) return'overdue';
   if(currentMonth===schedIdx) return'due';
   if(schedIdx===currentMonth+1||(currentMonth===11&&schedIdx===0)) return'due_next';
@@ -2122,15 +2136,30 @@ function syncStatusPillStyles(){
 function renderMonthPills(){
   const pills=document.getElementById('mob-month-pills');
   if(!pills) return;
-  const now=new Date();
-  const cur=now.getMonth();
-  const indices=[(cur+11)%12, cur, (cur+1)%12];
-  const selected=document.getElementById('f-sched-month').value;
-  pills.innerHTML=indices.map(i=>{
-    const name=MONTH_NAMES[i];
-    const isSelected=selected===name;
-    return `<button onclick="selectMonthPill('${name}')" style="font-family:var(--sans);font-size:12px;font-weight:${isSelected?'700':'500'};padding:5px 12px;border-radius:20px;border:1px solid ${isSelected?'transparent':'rgba(0,0,0,.12)'};background:${isSelected?'var(--accent)':'var(--surface)'};color:${isSelected?'#fff':'var(--text2)'};cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0">${name}</button>`;
-  }).join('');
+
+  const overdueCount=devices.filter(d=>getStatus(d)==='overdue'&&getStatus(d)!=='decommissioned').length;
+  const dueCount=devices.filter(d=>getStatus(d)==='due').length;
+  const dueNextCount=devices.filter(d=>getStatus(d)==='due_next').length;
+  const failedCount=devices.filter(d=>getStatus(d)==='failed').length;
+
+  const activeStatuses=window._activeStatuses||new Set();
+  const mkPill=(label,status,count,colour,bg)=>{
+    if(count===0&&(status==='overdue'||status==='failed')) return ''; // hide when empty
+    const isOn=activeStatuses.has(status)&&![...activeStatuses].some(s=>s!==status&&s!=='all');
+    // Pill is highlighted if it's the ONLY active status filter
+    const allOn=activeStatuses.size>=7; // all statuses active = no filter
+    const isActive=!allOn&&activeStatuses.size===1&&activeStatuses.has(status);
+    return`<button onclick="filterByStatus('${status}')" style="font-family:var(--sans);font-size:12px;font-weight:${isActive?'700':'500'};padding:5px 12px;border-radius:20px;border:1px solid ${isActive?'transparent':'rgba(0,0,0,.12)'};background:${isActive?colour:'var(--surface)'};color:${isActive?'#fff':colour};cursor:pointer;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:4px">
+      ${label} <span style="font-size:10px;background:${isActive?'rgba(255,255,255,.25)':bg};color:${isActive?'#fff':colour};padding:1px 6px;border-radius:10px;font-weight:700">${count}</span>
+    </button>`;
+  };
+
+  pills.innerHTML=
+    mkPill('Overdue','overdue',overdueCount,'var(--red)','var(--red-bg)')+
+    mkPill('Due','due',dueCount,'#e67e22','#fef6e6')+
+    mkPill('Next month','due_next',dueNextCount,'#1976d2','#e3f0fc')+
+    mkPill('Failed','failed',failedCount,'var(--red)','var(--red-bg)');
+
   // Sync pin button active state
   const pinBtn=document.getElementById('mob-pin-btn');
   const pinIcon=document.getElementById('mob-pin-icon');
@@ -2139,6 +2168,19 @@ function renderMonthPills(){
     pinBtn.style.borderColor=sortGpsOrigin?'#e53935':'rgba(0,0,0,.12)';
     if(pinIcon) pinIcon.style.color=sortGpsOrigin?'#fff':'var(--text3)';
   }
+}
+
+function filterByStatus(status){
+  // Toggle: if already sole filter, reset to all
+  const cur=window._activeStatuses||new Set();
+  const allStatuses=new Set(['overdue','due','due_next','upcoming','complete','failed','pending','repaired','decommissioned']);
+  if(cur.size===1&&cur.has(status)){
+    window._activeStatuses=allStatuses;
+  } else {
+    window._activeStatuses=new Set([status]);
+  }
+  syncStatusPillStyles();
+  render();
 }
 
 function selectMonthPill(month){
@@ -2634,6 +2676,41 @@ function getTemplates(){
 }
 function saveTemplates(t){localStorage.setItem(TEMPLATES_KEY,JSON.stringify(t));}
 
+function copyDeviceList(type){
+  const isFailed=type==='failed';
+  const title=type==='failed'?'Failed Devices':type==='overdue'?'Overdue Devices':'Decommissioned Devices';
+  const list=type==='decommissioned'
+    ?devices.filter(d=>getStatus(d)==='decommissioned')
+    :devices.filter(d=>getStatus(d)===type);
+  const bySuburb={};
+  list.forEach(d=>{
+    if(!bySuburb[d.suburb]) bySuburb[d.suburb]=[];
+    bySuburb[d.suburb].push(d);
+  });
+  const suburbs=Object.keys(bySuburb).sort();
+  const lines=[title.toUpperCase()+' — '+new Date().toLocaleDateString(),'='+'='.repeat(49),''];
+  suburbs.forEach(sub=>{
+    lines.push(sub+' ('+bySuburb[sub].length+')');
+    lines.push('-'.repeat(40));
+    bySuburb[sub].forEach(d=>{
+      const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
+      lines.push('  Serial: '+(d.serial||'—')+' | '+(d.make||'')+ ' '+(d.model||'')+' '+(d.size||'')+'mm');
+      lines.push('  Location: '+(d.location||'—'));
+      if(isFailed&&d.testDate){
+        const[y,m,day]=d.testDate.split('-');
+        lines.push('  Failed: '+day+'/'+m+'/'+y+(lastLog&&lastLog.notes?' — '+lastLog.notes:''));
+      } else if(type==='decommissioned'&&d.testDate){
+        const[y,m,day]=d.testDate.split('-');
+        lines.push('  Decommissioned: '+day+'/'+m+'/'+y);
+      } else {
+        lines.push('  Scheduled: '+(d.scheduledMonth||'—'));
+      }
+      lines.push('');
+    });
+  });
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('✓ Copied to clipboard'));
+}
+
 function renderDeviceListReport(type){
   const el=document.getElementById('reports-content');
   if(!el) return;
@@ -2653,34 +2730,13 @@ function renderDeviceListReport(type){
   });
   const suburbs=Object.keys(bySuburb).sort();
 
-  const copyText=()=>{
-    const lines=[title.toUpperCase()+' — '+new Date().toLocaleDateString(),'='+'='.repeat(49),''];
-    suburbs.forEach(sub=>{
-      lines.push(sub+' ('+bySuburb[sub].length+')');
-      lines.push('-'.repeat(40));
-      bySuburb[sub].forEach(d=>{
-        const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
-        lines.push('  Serial: '+(d.serial||'—')+' | '+d.make+' '+d.model+' '+d.size+'mm');
-        lines.push('  Location: '+d.location);
-        if(isFailed&&d.testDate){
-          const[y,m,day]=d.testDate.split('-');
-          lines.push('  Failed: '+day+'/'+m+'/'+y+(lastLog&&lastLog.notes?' — '+lastLog.notes:''));
-        } else {
-          lines.push('  Scheduled: '+(d.scheduledMonth||'—'));
-        }
-        lines.push('');
-      });
-    });
-    navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('Copied to clipboard!'));
-  };
-
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:10px">
       <div>
         <div style="font-size:15px;font-weight:700;color:${colour}">${icon} ${title}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">${list.length} device${list.length!==1?'s':''} across ${suburbs.length} suburb${suburbs.length!==1?'s':''}</div>
       </div>
-      <button onclick="(${copyText.toString()})()" style="font-family:var(--sans);padding:8px 14px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0">
+      <button onclick="copyDeviceList('${type}')" style="font-family:var(--sans);padding:8px 14px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0">
         📋 Copy list
       </button>
     </div>
@@ -2725,23 +2781,26 @@ function renderMonthlyReport(){
   if(!el) return;
 
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const currentMonth=new Date().getMonth(); // 0-based
+  const now=new Date();
+  const currentMonth=now.getMonth();
+  const currentYear=now.getFullYear();
+  const ry=reportYear;
 
-  // Build per-month stats
+  // Build per-month stats using selected year
   const monthData=MONTHS.map((month,idx)=>{
-    const scheduled=devices.filter(d=>d.scheduledMonth===month&&getStatus(d)!=='decommissioned');
-    const complete=scheduled.filter(d=>getStatus(d)==='complete'||getStatus(d)==='repaired');
-    const failed=scheduled.filter(d=>getStatus(d)==='failed');
-    const overdue=scheduled.filter(d=>getStatus(d)==='overdue');
-    const remaining=scheduled.filter(d=>!['complete','repaired','failed'].includes(getStatus(d)));
+    const scheduled=devices.filter(d=>d.scheduledMonth===month&&getStatusForYear(d,ry)!=='decommissioned');
+    const complete=scheduled.filter(d=>['complete','repaired'].includes(getStatusForYear(d,ry)));
+    const failed=scheduled.filter(d=>getStatusForYear(d,ry)==='failed');
+    const overdue=scheduled.filter(d=>getStatusForYear(d,ry)==='overdue');
+    const remaining=scheduled.filter(d=>!['complete','repaired','failed'].includes(getStatusForYear(d,ry)));
     const pct=scheduled.length?Math.round((complete.length/scheduled.length)*100):0;
-    const isPast=idx<currentMonth;
-    const isCurrent=idx===currentMonth;
+    const isPast=ry<currentYear||(ry===currentYear&&idx<currentMonth);
+    const isCurrent=ry===currentYear&&idx===currentMonth;
     return{month,idx,scheduled,complete,failed,overdue,remaining,pct,isPast,isCurrent};
   });
 
-  const totalDevices=devices.filter(d=>getStatus(d)!=='decommissioned').length;
-  const totalComplete=devices.filter(d=>['complete','repaired'].includes(getStatus(d))).length;
+  const totalDevices=devices.filter(d=>getStatusForYear(d,ry)!=='decommissioned').length;
+  const totalComplete=devices.filter(d=>['complete','repaired'].includes(getStatusForYear(d,ry))).length;
   const yearPct=totalDevices?Math.round((totalComplete/totalDevices)*100):0;
 
   el.innerHTML=`
@@ -2824,6 +2883,9 @@ function renderDecommissionedReport(){
         <div style="font-size:15px;font-weight:700;color:#666">⊖ Decommissioned Devices</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">${list.length} device${list.length!==1?'s':''} across ${suburbs.length} suburb${suburbs.length!==1?'s':''} — tap any device to reactivate</div>
       </div>
+      <button onclick="copyDeviceList('decommissioned')" style="font-family:var(--sans);padding:8px 14px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0">
+        📋 Copy list
+      </button>
     </div>
     ${list.length===0
       ?`<div style="text-align:center;padding:3rem 1rem;color:var(--text3)">
@@ -3260,9 +3322,27 @@ function applyTemplate(suburb){
   return{subject,body};
 }
 let currentReportTab='suburb';
+let reportYear=new Date().getFullYear();
+
+function changeReportYear(delta){
+  const currentYear=new Date().getFullYear();
+  reportYear=Math.min(currentYear, Math.max(2020, reportYear+delta));
+  updateReportYearUI();
+  renderReport(currentReportTab);
+}
+
+function updateReportYearUI(){
+  const currentYear=new Date().getFullYear();
+  const lbl=document.getElementById('report-year-label');
+  if(lbl) lbl.textContent=reportYear;
+  const nextBtn=document.getElementById('report-year-next');
+  if(nextBtn) nextBtn.style.opacity=reportYear>=currentYear?'0.3':'1';
+}
 
 function openReports(){
+  reportYear=new Date().getFullYear();
   document.getElementById('reports-modal').style.display='flex';
+  updateReportYearUI();
   // Activity tab — dev only
   const actTab=document.getElementById('rtab-activity');
   if(actTab) actTab.style.display=isDev()?'block':'none';
@@ -3304,6 +3384,7 @@ function renderReport(tab){
   if(tab==='monthly'){renderMonthlyReport();return;}
   const showDecom=getSetting('showDecommissioned',true);
   const activeDevices=devices.filter(d=>showDecom||getStatus(d)!=='decommissioned');
+  const ry=reportYear; // use selected year for all status calculations in report
 
   if(tab==='suburb'){
     // Group by suburb, count by status
@@ -3312,14 +3393,14 @@ function renderReport(tab){
       const s=d.suburb||'Unknown';
       if(!suburbs[s]) suburbs[s]={total:0,complete:0,failed:0,overdue:0,due:0,repaired:0,decommissioned:0,pending:0,other:0};
       suburbs[s].total++;
-      const st=getStatus(d);
+      const st=getStatusForYear(d,ry);
       if(suburbs[s][st]!==undefined) suburbs[s][st]++;
       else suburbs[s].other++;
     });
     const sorted=Object.entries(suburbs).sort((a,b)=>a[0].localeCompare(b[0]));
-    const total=activeDevices.length;
-    const totalComplete=activeDevices.filter(d=>getStatus(d)==='complete'||getStatus(d)==='repaired').length;
-    const totalOverdue=activeDevices.filter(d=>getStatus(d)==='overdue').length;
+    const total=activeDevices.filter(d=>getStatusForYear(d,ry)!=='decommissioned').length;
+    const totalComplete=activeDevices.filter(d=>['complete','repaired'].includes(getStatusForYear(d,ry))).length;
+    const totalOverdue=activeDevices.filter(d=>getStatusForYear(d,ry)==='overdue').length;
 
     el.innerHTML=`
       <!-- Summary cards -->
@@ -5525,6 +5606,49 @@ function openMapView(){
 
 function closeMapView(){
   document.getElementById('map-modal').style.display='none';
+  // Reset to street view for next open
+  if(_isSatellite&&leafletMap&&_satelliteLayer){
+    leafletMap.removeLayer(_satelliteLayer);
+    if(_streetLayer) _streetLayer.addTo(leafletMap);
+    _isSatellite=false;
+    const btn=document.getElementById('map-satellite-btn');
+    if(btn) btn.style.background='rgba(255,255,255,.12)';
+  }
+}
+
+let _isSatellite=false;
+let _streetLayer=null;
+let _satelliteLayer=null;
+
+function toggleSatellite(){
+  if(!leafletMap) return;
+  _isSatellite=!_isSatellite;
+  const btn=document.getElementById('map-satellite-btn');
+
+  if(_isSatellite){
+    if(_streetLayer) leafletMap.removeLayer(_streetLayer);
+    if(!_satelliteLayer){
+      // ESRI World Imagery — free, no API key required
+      _satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+        attribution:'Tiles © Esri',
+        maxZoom:19
+      });
+    }
+    _satelliteLayer.addTo(leafletMap);
+    if(btn){btn.style.background='rgba(255,255,255,.35)';btn.title='Switch to street view';}
+    showToast('Satellite view');
+  } else {
+    if(_satelliteLayer) leafletMap.removeLayer(_satelliteLayer);
+    if(!_streetLayer){
+      _streetLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom:19
+      });
+    }
+    _streetLayer.addTo(leafletMap);
+    if(btn){btn.style.background='rgba(255,255,255,.12)';btn.title='Switch to satellite view';}
+    showToast('Street view');
+  }
 }
 
 function initMap(){
@@ -5541,10 +5665,11 @@ function initMap(){
   leafletMap=L.map('leaflet-map',{zoomControl:true}).setView([centreLat,centreLng],11);
 
   // OpenStreetMap tiles — free, no API key
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  _streetLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom:19
-  }).addTo(leafletMap);
+  });
+  _streetLayer.addTo(leafletMap);
 
   refreshMapMarkers();
 }
@@ -5778,6 +5903,9 @@ function generateQR(url, deviceName){
     <button class="mfbtn" data-status="complete" onclick="setMapFilter('complete',this)">Completed</button>
     <button onclick="toggleMapColourPanel()" title="Customise pin colours" style="font-family:var(--sans);flex-shrink:0;margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="white" stroke-width="1.3"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M9.01 9.01l1.06 1.06M2.93 11.07l1.06-1.06M9.01 4.99l1.06-1.06" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </button>
+    <button id="map-satellite-btn" onclick="toggleSatellite()" title="Toggle satellite view" style="font-family:var(--sans);flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="8" height="6" rx="1" stroke="white" stroke-width="1.2"/><path d="M9 7h3M11 5l2 2-2 2" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="7" r="1.5" stroke="white" stroke-width="1.2"/></svg>
     </button>
   </div>
   <!-- Colour customiser panel — hidden by default -->

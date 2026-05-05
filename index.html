@@ -1296,7 +1296,7 @@ const SCC_CLIENT_ID='default';
 const APP_NAME='FieldPass';
 
 // ── App version — update with each release ──
-const APP_VERSION='1.6.2';
+const APP_VERSION='1.6.3';
 const APP_VERSION_DATE='2026-05-05';
 
 // ── Client helpers ─────────────────────────────────────
@@ -2144,7 +2144,7 @@ function renderMonthPills(){
 
   const activeStatuses=window._activeStatuses||new Set();
   const mkPill=(label,status,count,colour,bg)=>{
-    if(count===0&&(status==='overdue'||status==='failed')) return ''; // hide when empty
+    if(count===0&&(status==='overdue'||status==='failed'||status==='due'||status==='due_next')) return '';
     const isOn=activeStatuses.has(status)&&![...activeStatuses].some(s=>s!==status&&s!=='all');
     // Pill is highlighted if it's the ONLY active status filter
     const allOn=activeStatuses.size>=7; // all statuses active = no filter

@@ -777,11 +777,14 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         </div>
         <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Test observations, follow-up actions…"></textarea></div>
       </div>
-      <!-- Delete device — admin only -->
-      <div id="delete-device-wrap" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border2)">
-        <button onclick="generateCOC()" style="font-family:var(--sans);width:100%;padding:12px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid rgba(26,77,110,.2);background:var(--accent-light);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:8px">
+      <!-- Certificate of Compliance -->
+      <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border2)">
+        <button onclick="generateCOC()" style="font-family:var(--sans);width:100%;padding:12px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid rgba(26,77,110,.2);background:var(--accent-light);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">
           📄 Generate Certificate of Compliance
         </button>
+      </div>
+      <!-- Delete device — admin only -->
+      <div id="delete-device-wrap" style="display:none;margin-top:0.75rem">
         <button id="btn-delete-device" onclick="deleteDevice()" style="font-family:var(--sans);width:100%;padding:12px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid rgba(184,50,50,.25);background:rgba(184,50,50,.06);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M4.5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M5 6v4M8 6v4M2.5 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9l.7-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Delete Device
@@ -1308,7 +1311,7 @@ const SCC_CLIENT_ID='default';
 const APP_NAME='FieldPass';
 
 // ── App version — update with each release ──
-const APP_VERSION='1.7.1';
+const APP_VERSION='1.7.2';
 const APP_VERSION_DATE='2026-05-07';
 
 // ── Client helpers ─────────────────────────────────────
@@ -2183,15 +2186,17 @@ function renderMonthPills(){
 }
 
 function filterByStatus(status){
-  // Toggle: if already sole filter, reset to all
-  const cur=window._activeStatuses||new Set();
   const allStatuses=new Set(['overdue','due','due_next','upcoming','complete','failed','pending','repaired','decommissioned']);
-  if(cur.size===1&&cur.has(status)){
-    window._activeStatuses=allStatuses;
+  const cur=window._activeStatuses||allStatuses;
+  const allOn=cur.size>=allStatuses.size;
+  // Toggle: if already sole filter, reset to all; if all active, filter to just this one
+  if(!allOn&&cur.size===1&&cur.has(status)){
+    window._activeStatuses=new Set(allStatuses);
   } else {
     window._activeStatuses=new Set([status]);
   }
   syncStatusPillStyles();
+  renderMonthPills();
   render();
 }
 

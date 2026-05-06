@@ -1312,7 +1312,7 @@ const SCC_CLIENT_ID='default';
 const APP_NAME='FieldPass';
 
 // ── App version — update with each release ──
-const APP_VERSION='1.7.3';
+const APP_VERSION='1.7.4';
 const APP_VERSION_DATE='2026-05-07';
 
 // ── Client helpers ─────────────────────────────────────
@@ -2744,172 +2744,126 @@ function cocGetValues(){
   };
 }
 
+// URL of the original NSW Fair Trading COC PDF — served from GitHub Pages alongside the app
+const COC_PDF_URL='https://neil293.github.io/FieldPass/coc.pdf';
+
 function cocAction(action){
-  // Load jsPDF lazily
-  if(!window.jspdf){
+  // Load pdf-lib lazily
+  if(!window.PDFLib){
     showToast('Loading PDF library…',3000);
     const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
     s.onload=()=>cocAction(action);
     document.head.appendChild(s);
     return;
   }
   showToast('Generating PDF…',3000);
   const vals=cocGetValues();
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const pw=210, ph=297;
-  const ml=15, mr=15, mt=15;
-  let y=mt;
+  const p2='topmostSubform[0].Page2[0].';
+  const chkOn='/1';
 
-  // Helpers
-  const W=pw-ml-mr;
-  const line=(x1,y1,x2,y2)=>doc.line(x1,y1,x2,y2);
-  const rect=(x,rx,ry,rw,rh,fill)=>{if(fill){doc.setFillColor(...fill);doc.rect(rx,ry,rw,rh,'F');}else doc.rect(rx,ry,rw,rh,'S');};
-  const txt=(t,x,ty,size=9,style='normal',color=[0,0,0])=>{
-    doc.setFontSize(size);doc.setFont('helvetica',style);doc.setTextColor(...color);
-    doc.text(t,x,ty,{maxWidth:W-2});
-  };
-  const fieldBox=(label,val,x,fy,w,h=10)=>{
-    doc.setDrawColor(150);doc.rect(x,fy,w,h,'S');
-    doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
-    doc.text(label,x+1,fy+3);
-    doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-    if(val) doc.text(String(val).slice(0,Math.floor(w/2)),x+1,fy+8);
-  };
-  const sectionHdr=(label,sy)=>{
-    doc.setFillColor(26,77,110);doc.rect(ml,sy,W,7,'F');
-    doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
-    doc.text(label,pw/2,sy+5,{align:'center'});
-    return sy+7;
-  };
-  const tick=(checked)=>checked?'☑':'☐';
+  // Fetch the original PDF then fill it
+  fetch(COC_PDF_URL)
+    .then(r=>{
+      if(!r.ok) throw new Error('Could not load COC PDF — make sure coc.pdf is uploaded to GitHub');
+      return r.arrayBuffer();
+    })
+    .then(buf=>window.PDFLib.PDFDocument.load(buf,{ignoreEncryption:true}))
+    .then(async pdfDoc=>{
+      const form=pdfDoc.getForm();
 
-  // Title
-  doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
-  doc.text('CERTIFICATE OF COMPLIANCE',pw/2,y+4,{align:'center'});y+=7;
-  doc.setFontSize(9);doc.setFont('helvetica','normal');
-  doc.text('for Plumbing and Drainage Work',pw/2,y+3,{align:'center'});y+=8;
+      // Helper to safely set a text field
+      const setTxt=(id,val)=>{try{if(val) form.getTextField(id).setText(val);}catch(e){}};
+      const setChk=(id,on)=>{try{const f=form.getCheckBox(id);on?f.check():f.uncheck();}catch(e){}};
 
-  // Property
-  y=sectionHdr('PROPERTY & OWNER DETAILS',y);
-  fieldBox('House No. / Street',vals.street,ml,y,W*0.55,10);
-  fieldBox('Suburb',vals.suburb,ml+W*0.55,y,W*0.28,10);
-  fieldBox('Postcode',vals.postcode,ml+W*0.83,y,W*0.17,10);
-  y+=10;
-  fieldBox('Lot No.',vals.lot,ml,y,W*0.2,10);
-  fieldBox('DP No.',vals.dp,ml+W*0.2,y,W*0.2,10);
-  fieldBox('Owner\'s Name',vals.owner,ml+W*0.4,y,W*0.6,10);
-  y+=10;
-  fieldBox('Full Address',vals.ownerAddr,ml,y,W,10);
-  y+=10;
+      // Property & Owner (page 2)
+      setTxt(p2+'Street[0]', vals.street);
+      setTxt(p2+'Suburb[0]', vals.suburb);
+      // Postcode — 4 individual boxes
+      const pc=(vals.postcode||'').padEnd(4,' ');
+      setTxt(p2+'Postcode[0]', pc[0]);
+      setTxt(p2+'Postcode[1]', pc[1]);
+      setTxt(p2+'Postcode[2]', pc[2]);
+      setTxt(p2+'Postcode[3]', pc[3]);
+      setTxt(p2+'Lot_No[0]', vals.lot);
+      setTxt(p2+'DP_No[0]', vals.dp);
+      setTxt(p2+'Owners_Name[0]', vals.owner);
+      setTxt(p2+'Full_Address[0]', vals.ownerAddr);
 
-  // Licensee
-  y=sectionHdr('LICENSEE\'S DETAILS',y);
-  fieldBox('Full Name',vals.name,ml,y,W*0.45,10);
-  fieldBox('Address for Notices',vals.addr,ml+W*0.45,y,W*0.55,10);
-  y+=10;
-  fieldBox('Phone No.',vals.phone,ml,y,W*0.3,10);
-  fieldBox('Qualified Supervisor No.',vals.supervisor,ml+W*0.3,y,W*0.4,10);
-  fieldBox(`Expiry: ${vals.supDD}/${vals.supMM}/${vals.supYYYY}`,'',ml+W*0.7,y,W*0.3,10);
-  y+=10;
-  fieldBox('Licence No.',vals.licence,ml+W*0.3,y,W*0.4,10);
-  fieldBox(`Expiry: ${vals.licDD}/${vals.licMM}/${vals.licYYYY}`,'',ml+W*0.7,y,W*0.3,10);
-  doc.rect(ml,y,W*0.3,10,'S');
-  y+=10;
+      // Licensee
+      setTxt(p2+'Full_Name[0]', vals.name);
+      setTxt(p2+'Address_for_Notices[0]', vals.addr);
+      setTxt(p2+'Phone_No[0]', vals.phone);
+      setTxt(p2+'Qualified_Supervisor_No[0]', vals.supervisor);
+      setTxt(p2+'DD[0]', vals.supDD);
+      setTxt(p2+'MM[0]', vals.supMM);
+      setTxt(p2+'YYYY[0]', vals.supYYYY);
+      setTxt(p2+'Licence_No[0]', vals.licence);
+      setTxt(p2+'DD[1]', vals.licDD);
+      setTxt(p2+'MM[1]', vals.licMM);
+      setTxt(p2+'YYYY[1]', vals.licYYYY);
 
-  // Work
-  y=sectionHdr('WORK OF WATER SUPPLY',y);
-  doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-  doc.text('Give full Description of Work carried out',ml+1,y+4);
-  doc.text(`${tick(vals.workBackflow)} Install, alter, disconnect or remove a backflow prevention device`,ml+2,y+9);
-  doc.text(`${tick(vals.workWater)} Install Water Supply   ${tick(vals.workOther)} Other`,ml+2,y+14);
-  y+=4;
-  // Work desc box
-  doc.setDrawColor(150);doc.rect(ml,y+12,W,16,'S');
-  doc.setFontSize(7.5);
-  const descLines=doc.splitTextToSize(vals.workDesc,W-4);
-  doc.text(descLines.slice(0,3),ml+2,y+18);
-  y+=28;
-  doc.setFontSize(7.5);
-  doc.text(`PLUMBING WORK TO COMPLY WITH   ${tick(vals.complyStd)} AS/NZS3500   ☐ ALTERNATIVE SOLUTION   ☐ COMBINED`,ml+1,y+3);
-  y+=6;
+      // Work checkboxes
+      setChk(p2+'Install_Water_Supply[1]', vals.workWater);
+      setChk(p2+'Install_alter_disconnect_or_remove_a_backflow_prevention_device[1]', vals.workBackflow);
+      setChk(p2+'Other[0]', vals.workOther);
+      if(vals.workOther||vals.workDesc) setTxt(p2+'Other[2]', vals.workDesc);
+      setChk(p2+'AS_NZS3500[1]', vals.complyStd);
 
-  // Fee section
-  y=sectionHdr('SEWERAGE/WATER SERVICE INSPECTION FEE',y);
-  fieldBox('Date Fee Paid','',ml,y,W*0.3,10);
-  fieldBox('Date of Commencement','',ml+W*0.3,y,W*0.35,10);
-  fieldBox(`Date of Completion: ${vals.compDD}/${vals.compMM}/${vals.compYYYY}`,'',ml+W*0.65,y,W*0.35,10);
-  y+=10;
-  fieldBox('Amount $','',ml,y,W*0.3,10);
-  fieldBox(`Reference No.: ${vals.refno}`,'',ml+W*0.3,y,W*0.35,10);
-  fieldBox('Contractors Signature','',ml+W*0.65,y,W*0.35,10);
-  y+=14;
+      // Completion date (DD[5]/MM[5]/YYYY[5] = "work was completed on" date)
+      setTxt(p2+'DD[5]', vals.compDD);
+      setTxt(p2+'MM[5]', vals.compMM);
+      setTxt(p2+'YYYY[5]', vals.compYYYY);
+      // Estimated completion date (DD[4]/MM[4]/YYYY[4])
+      setTxt(p2+'DD[4]', vals.compDD);
+      setTxt(p2+'MM[4]', vals.compMM);
+      setTxt(p2+'YYYY[4]', vals.compYYYY);
+      setTxt(p2+'Reference_No[0]', vals.refno);
 
-  // Certification text
-  doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
-  const defY=vals.defects==='Yes';
-  const certLines=[
-    '1. In respect of authorised work carried out by me at the above mentioned property I certify that:',
-    '   i.   The work corresponds to the specifications in the notice of work.',
-    '   ii.  The completed work has been tested as required by the Regulator and has passed such test;',
-    '   iii. Where required by Section 11 of the Plumbing and Drainage Act 2011, I have given written notice of any',
-    `        identified pre-existing defective plumbing and/or drainage work ...  Yes ${defY?'☑':'☐'}   N/A ${!defY?'☑':'☐'}`,
-    '   iv.  The work complies with the relevant Acts, Regulations, Codes and Standards;',
-    `   v.   The work was completed on  ${vals.compDD}/${vals.compMM}/${vals.compYYYY}        Contractors Signature ____________________________`,
-    '',
-    '2. If any defect is found in the work carried out by me within a period of two (2) years or within the time specified by',
-    '   Regulator, from the date of the final inspection, and the Regulator for Plumbing and Drainage certifies by written',
-    '   notice that in their opinion the defect is due to faulty workmanship or defective materials, then I undertake to',
-    '   rectify such work at my sole expense, if so directed by the Regulator within the time specified.',
-  ];
-  certLines.forEach(l=>{doc.text(l,ml,y);y+=4;});
+      // Pre-existing defects
+      setChk(p2+'Yes[0]', vals.defects==='Yes');
+      setChk(p2+'No[0]', vals.defects==='NA');
 
-  const filename=`COC_${(vals.suburb||'unknown').replace(/\s/g,'_')}_${vals.compDD||'xx'}${vals.compMM||'xx'}${vals.compYYYY||'xxxx'}.pdf`;
-  const pdfBlob=doc.output('blob');
+      // Extract page 2 only
+      const newDoc=await window.PDFLib.PDFDocument.create();
+      const [page2]=await newDoc.copyPages(pdfDoc,[1]); // page index 1 = page 2
+      newDoc.addPage(page2);
 
-  if(action==='print'){
-    const url=URL.createObjectURL(pdfBlob);
-    const win=window.open(url,'_blank');
-    if(win) win.onload=()=>{win.print();setTimeout(()=>URL.revokeObjectURL(url),3000);}
-    else{const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
-  } else if(action==='share'){
-    const file=new File([pdfBlob],filename,{type:'application/pdf'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){
-      navigator.share({files:[file],title:'Certificate of Compliance',text:'FieldPass — COC'});
-    } else {
-      const url=URL.createObjectURL(pdfBlob);
-      const a=document.createElement('a');a.href=url;a.download=filename;a.click();
-      URL.revokeObjectURL(url);
-      showToast('PDF downloaded — share from your files app');
-    }
-  } else if(action==='email'){
-    const pdfB64=doc.output('datauristring');
-    // Try Web Share with file first (Android)
-    const file=new File([pdfBlob],filename,{type:'application/pdf'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){
-      navigator.share({files:[file],title:'Certificate of Compliance',text:'Please find attached the Certificate of Compliance.'});
-    } else {
-      // Fallback: download PDF and open mailto
-      const url=URL.createObjectURL(pdfBlob);
-      const a=document.createElement('a');a.href=url;a.download=filename;a.click();
-      URL.revokeObjectURL(url);
-      const u=currentUser||{};
-      const ci=getClientInfo();
-      const subject=encodeURIComponent('Certificate of Compliance — '+vals.suburb);
-      const body=encodeURIComponent(
-        `Please find the Certificate of Compliance attached.\n\n`+
-        `Property: ${vals.street}, ${vals.suburb} ${vals.postcode}\n`+
-        `Work completed: ${vals.compDD}/${vals.compMM}/${vals.compYYYY}\n`+
-        `Licensee: ${vals.name}\n`+
-        `Licence No: ${vals.licence}\n\n`+
-        `Regards,\n${u.name||''}\n${u.company||''}\n${u.phone||''}`
-      );
-      const to=encodeURIComponent(ci.email||'');
-      setTimeout(()=>window.open(`mailto:${to}?subject=${subject}&body=${body}`,'_self'),500);
-      showToast('PDF saved — attach it to the email that opens');
-    }
-  }
+      // Flatten so fields show as printed text
+      newDoc.getForm().flatten();
+
+      const pdfBytes=await newDoc.save();
+      const pdfBlob=new Blob([pdfBytes],{type:'application/pdf'});
+      const filename=`COC_${(vals.suburb||'unknown').replace(/\s/g,'_')}_${vals.compDD||'xx'}${vals.compMM||'xx'}${vals.compYYYY||'xxxx'}.pdf`;
+
+      if(action==='print'){
+        const url=URL.createObjectURL(pdfBlob);
+        const win=window.open(url,'_blank');
+        if(win){win.onload=()=>{win.print();setTimeout(()=>URL.revokeObjectURL(url),3000);};}
+        else{const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+      } else if(action==='share'||action==='email'){
+        const file=new File([pdfBlob],filename,{type:'application/pdf'});
+        if(navigator.canShare&&navigator.canShare({files:[file]})){
+          await navigator.share({files:[file],title:'Certificate of Compliance',text:'FieldPass COC'});
+        } else {
+          const url=URL.createObjectURL(pdfBlob);
+          const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+          URL.revokeObjectURL(url);
+          if(action==='email'){
+            const u=currentUser||{};
+            const ci=getClientInfo();
+            const subj=encodeURIComponent('Certificate of Compliance — '+vals.suburb);
+            const body=encodeURIComponent(`Please find the Certificate of Compliance attached.\n\nProperty: ${vals.street}, ${vals.suburb} ${vals.postcode}\nCompleted: ${vals.compDD}/${vals.compMM}/${vals.compYYYY}\nLicensee: ${vals.name}\nLicence No: ${vals.licence}\n\nRegards,\n${u.name||''}`);
+            setTimeout(()=>window.open(`mailto:?subject=${subj}&body=${body}`,'_self'),500);
+            showToast('PDF saved — attach it to the email that opens');
+          }
+        }
+      }
+    })
+    .catch(err=>{
+      console.error('COC PDF error:',err);
+      showToast('Error: '+err.message);
+    });
 }
 
 function deleteDevice(){

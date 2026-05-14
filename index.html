@@ -3061,7 +3061,19 @@ function renderMonthlyReport(){
     const pct=scheduled.length?Math.round((complete.length/scheduled.length)*100):0;
     const isPast=ry<currentYear||(ry===currentYear&&idx<currentMonth);
     const isCurrent=ry===currentYear&&idx===currentMonth;
-    return{month,idx,scheduled,complete,failed,overdue,remaining,pct,isPast,isCurrent};
+    // Suburb breakdown
+    const suburbMap={};
+    scheduled.forEach(d=>{
+      const s=d.suburb||'Unknown';
+      if(!suburbMap[s]) suburbMap[s]={total:0,done:0,failed:0,overdue:0};
+      suburbMap[s].total++;
+      const st=getStatusForYear(d,ry);
+      if(['complete','repaired'].includes(st)) suburbMap[s].done++;
+      else if(st==='failed') suburbMap[s].failed++;
+      else if(st==='overdue') suburbMap[s].overdue++;
+    });
+    const suburbs=Object.keys(suburbMap).sort().map(name=>({name,...suburbMap[name]}));
+    return{month,idx,scheduled,complete,failed,overdue,remaining,pct,isPast,isCurrent,suburbs};
   });
 
   const totalDevices=devices.filter(d=>getStatusForYear(d,ry)!=='decommissioned').length;
@@ -3099,28 +3111,52 @@ function renderMonthlyReport(){
             <div style="font-size:11px;color:var(--text3)">No devices scheduled</div>
           </div>`;
         }
-        return`<div style="background:${bgCol};border-radius:12px;border:1px solid ${borderCol};padding:12px 14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="font-size:14px;font-weight:${m.isCurrent?'700':'600'};color:${m.isCurrent?'var(--accent)':'var(--text)'}">${m.month}</div>
-              ${m.isCurrent?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--accent);color:#fff">NOW</span>':''}
+        const suburbRows=m.suburbs.map(s=>{
+          const sp=s.total?Math.round((s.done/s.total)*100):0;
+          const sc=sp===100?'var(--green)':sp>50?'#e67e22':'var(--accent)';
+          return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border2)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</div>
+              <div style="height:3px;background:rgba(0,0,0,.07);border-radius:2px;margin-top:3px;overflow:hidden">
+                <div style="height:100%;width:${sp}%;background:${sc};border-radius:2px;transition:width .3s"></div>
+              </div>
             </div>
-            <div style="text-align:right">
-              <span style="font-size:18px;font-weight:700;color:${pctCol}">${m.pct}%</span>
-              <span style="font-size:11px;color:var(--text3);margin-left:4px">${m.complete.length}/${m.scheduled.length}</span>
+            <div style="text-align:right;flex-shrink:0">
+              <span style="font-size:11px;font-weight:600;color:${sc}">${sp}%</span>
+              <span style="font-size:10px;color:var(--text3);margin-left:3px">${s.done}/${s.total}</span>
+              ${s.failed?`<span style="font-size:10px;color:var(--red);margin-left:4px">✗${s.failed}</span>`:''}
+              ${s.overdue?`<span style="font-size:10px;color:var(--red);margin-left:4px">⚠${s.overdue}</span>`:''}
+            </div>
+          </div>`;
+        }).join('');
+        return`<div style="background:${bgCol};border-radius:12px;border:1px solid ${borderCol};overflow:hidden">
+          <div onclick="this.parentElement.querySelector('.month-suburbs').style.display=this.parentElement.querySelector('.month-suburbs').style.display==='none'?'block':'none';this.querySelector('.chev').style.transform=this.parentElement.querySelector('.month-suburbs').style.display==='none'?'rotate(0deg)':'rotate(180deg)'" style="padding:12px 14px;cursor:pointer;user-select:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:14px;font-weight:${m.isCurrent?'700':'600'};color:${m.isCurrent?'var(--accent)':'var(--text)'}">${m.month}</div>
+                ${m.isCurrent?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--accent);color:#fff">NOW</span>':''}
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="text-align:right">
+                  <span style="font-size:18px;font-weight:700;color:${pctCol}">${m.pct}%</span>
+                  <span style="font-size:11px;color:var(--text3);margin-left:4px">${m.complete.length}/${m.scheduled.length}</span>
+                </div>
+                <span class="chev" style="font-size:11px;color:var(--text3);transition:transform .2s;display:inline-block">▼</span>
+              </div>
+            </div>
+            <div style="height:5px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden;margin-bottom:6px">
+              <div style="height:100%;width:${m.pct}%;background:${m.pct===100?'var(--green)':m.pct>50?'#e67e22':'var(--accent)'};border-radius:3px;transition:width .4s"></div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <span style="font-size:11px;color:var(--text3)">${m.scheduled.length} scheduled</span>
+              ${m.complete.length?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ ${m.complete.length} done</span>`:''}
+              ${m.remaining.length&&!m.isPast?`<span style="font-size:11px;color:var(--text2)">${m.remaining.length} remaining</span>`:''}
+              ${m.overdue.length?`<span style="font-size:11px;color:var(--red);font-weight:600">⚠ ${m.overdue.length} overdue</span>`:''}
+              ${m.failed.length?`<span style="font-size:11px;color:var(--red);font-weight:500">✗ ${m.failed.length} failed</span>`:''}
             </div>
           </div>
-          <!-- Progress bar -->
-          <div style="height:5px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden;margin-bottom:6px">
-            <div style="height:100%;width:${m.pct}%;background:${m.pct===100?'var(--green)':m.pct>50?'#e67e22':'var(--accent)'};border-radius:3px;transition:width .4s"></div>
-          </div>
-          <!-- Stats row -->
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <span style="font-size:11px;color:var(--text3)">${m.scheduled.length} scheduled</span>
-            ${m.complete.length?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ ${m.complete.length} done</span>`:''}
-            ${m.remaining.length&&!m.isPast?`<span style="font-size:11px;color:var(--text2)">${m.remaining.length} remaining</span>`:''}
-            ${m.overdue.length?`<span style="font-size:11px;color:var(--red);font-weight:600">⚠ ${m.overdue.length} overdue</span>`:''}
-            ${m.failed.length?`<span style="font-size:11px;color:var(--red);font-weight:500">✗ ${m.failed.length} failed</span>`:''}
+          <div class="month-suburbs" style="display:none;padding:0 14px 10px">
+            ${suburbRows}
           </div>
         </div>`;
       }).join('')}

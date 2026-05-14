@@ -1,5 +1,5 @@
 // ComplyTrack Service Worker — offline support
-const CACHE_NAME = 'fieldpass-v20';
+const CACHE_NAME = 'fieldpass-v22';
 const TILE_CACHE = 'complytrack-tiles-v1';
 
 // App shell files to cache on install
@@ -7,6 +7,8 @@ const APP_SHELL = [
   './',
   './index.html',
   './data.js',
+  './icon-192.png',
+  './icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
   'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap',

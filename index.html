@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a4d6e">
-<meta name="app-version" content="1.7.6-20260518">
+<meta name="app-version" content="1.7.7-20260522">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
 #offline-banner{display:none;position:fixed;top:52px;left:0;right:0;z-index:400;background:#b83232;color:#fff;font-size:12px;font-weight:600;text-align:center;padding:7px 1rem;letter-spacing:.02em}
@@ -748,6 +748,10 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
             </select>
           </div>
           <div class="field"><label>Location</label><input type="text" id="e-loc"></div>
+          <div class="frow">
+            <div class="field"><label>Complex / Property name</label><input type="text" id="e-complex" placeholder="e.g. Westfield Parramatta"></div>
+            <div class="field"><label>Street address</label><input type="text" id="e-address" placeholder="e.g. 159 Church St"></div>
+          </div>
           <div style="margin-top:2px">
             <div style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">GPS coordinates</div>
             <div class="frow" style="margin-bottom:6px">
@@ -848,6 +852,10 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       </div>
     </div>
     <div class="field"><label>Location description</label><input type="text" id="a-loc" placeholder="Street address or site name"></div>
+    <div class="frow">
+      <div class="field"><label>Complex / Property name</label><input type="text" id="a-complex" placeholder="e.g. Westfield Parramatta"></div>
+      <div class="field"><label>Street address</label><input type="text" id="a-address" placeholder="e.g. 159 Church St"></div>
+    </div>
     <!-- GPS section with Use My Location and Pick on Map buttons -->
     <div class="field">
       <label>GPS coordinates</label>
@@ -1317,7 +1325,7 @@ const SCC_CLIENT_ID='default';
 const APP_NAME='FieldPass';
 
 // ── App version — update with each release ──
-const APP_VERSION='1.7.6';
+const APP_VERSION='1.7.7';
 const APP_VERSION_DATE='2026-05-07';
 
 // ── Client helpers ─────────────────────────────────────
@@ -2240,7 +2248,7 @@ function render(){
   const showDecommissioned=getSetting('showDecommissioned',true);
   let filtered=devices.filter(d=>{
     if(!showDecommissioned&&getStatus(d)==='decommissioned') return false;
-    if(q&&![d.suburb,d.make,d.model,d.serial,d.location,d.notes||''].join(' ').toLowerCase().includes(q))return false;
+    if(q&&![d.suburb,d.make,d.model,d.serial,d.location,d.complex||'',d.address||'',d.notes||''].join(' ').toLowerCase().includes(q))return false;
     if(fc&&d.suburb!==fc)return false;
     if(fsm&&d.scheduledMonth!==fsm)return false;
     if(fst&&fst.size>0){
@@ -2419,7 +2427,7 @@ function deviceRow(d,hideSuburb){
     <td>${d.size?d.size+'mm':'-'}</td>
     <td><span class="mono">${d.serial||'-'}</span></td>
     <td><span class="mono" style="color:${d.backflowId?'var(--accent)':'var(--text3);font-weight:400'}">${d.backflowId?extractBfCode(d.backflowId):'—'}</span></td>
-    <td><span class="loc-cell" title="${d.location}">${d.location}</span></td>
+    <td><span class="loc-cell" title="${[d.complex,d.address,d.location].filter(Boolean).join(' · ')}">${d.complex?`<span style="font-weight:500">${d.complex}</span>${d.address?`<br><span style="font-size:10px;color:var(--text3)">${d.address}</span>`:''}`:(d.location||'')}</span></td>
     <td>${d.scheduledMonth?`<span class="sched-month">${d.scheduledMonth}</span>`:'-'}</td>
     <td style="font-size:12px;color:var(--text2)">
       ${fmtDate(d.testDate)}
@@ -2562,7 +2570,7 @@ function openDevice(id){
   const detailsEl=document.getElementById('m-details');
   if(detailsEl)detailsEl.style.display=canEdit?'':'none';
 
-  document.getElementById('m-loc-text').textContent=d.location;
+  document.getElementById('m-loc-text').textContent=[d.complex,d.address,d.location].filter(Boolean).join(' · ')||'';
   document.getElementById('m-map-link').href=mapsUrl(d);
   // Generate QR code for map link
   setTimeout(()=>generateQR(mapsUrl(d),(d.suburb||'')+' — '+(d.location||'').slice(0,40)),50);
@@ -2577,6 +2585,8 @@ function openDevice(id){
   updateBfidGoBtn();
   document.getElementById('e-sched').value=d.scheduledMonth||'';
   document.getElementById('e-loc').value=d.location||'';
+  document.getElementById('e-complex').value=d.complex||'';
+  document.getElementById('e-address').value=d.address||'';
   document.getElementById('e-lat').value=d.lat||'';
   document.getElementById('e-lng').value=d.lng||'';
   document.getElementById('btn-loc-label').textContent='Use my current location';
@@ -3929,6 +3939,8 @@ function saveTest(){
   d.backflowId=document.getElementById('e-backflowid').value.trim();
   d.scheduledMonth=document.getElementById('e-sched').value;
   d.location=document.getElementById('e-loc').value.trim();
+  d.complex=document.getElementById('e-complex').value.trim();
+  d.address=document.getElementById('e-address').value.trim();
   const newLat=parseFloat(document.getElementById('e-lat').value);
   const newLng=parseFloat(document.getElementById('e-lng').value);
   d.lat=isNaN(newLat)?null:newLat;
@@ -4270,6 +4282,8 @@ function saveAdd(){
     size,
     serial:document.getElementById('a-serial').value.trim(),
     location:document.getElementById('a-loc').value.trim(),
+    complex:document.getElementById('a-complex').value.trim(),
+    address:document.getElementById('a-address').value.trim(),
     lat:isNaN(lat)?null:lat,
     lng:isNaN(lng)?null:lng,
     scheduledMonth:document.getElementById('a-sched').value,
@@ -4279,7 +4293,7 @@ function saveAdd(){
   });
   save();closeAdd();populateSuburbFilter();populateYearFilter();render();
   showToast('Device added.');
-  ['a-suburb','a-make-sel','a-model-sel','a-size-sel','a-make','a-model','a-size','a-serial','a-loc','a-lat','a-lng','a-date','a-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['a-suburb','a-make-sel','a-model-sel','a-size-sel','a-make','a-model','a-size','a-serial','a-loc','a-complex','a-address','a-lat','a-lng','a-date','a-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('a-suburb-new').value='';
   const gpsBtn=document.getElementById('a-gps-btn');
   const gpsLabel=document.getElementById('a-gps-label');
@@ -4458,10 +4472,10 @@ function showEmailModal(subject, body, to='', cc='', suburb=''){
 }
 
 function exportCSV(){
-  const rows=[['Suburb','Make','Model','Size (mm)','Serial No.','Backflow ID','Location','Latitude','Longitude','Scheduled Month','Last Tested','Test Result','Tested By','Notes']];
+  const rows=[['Suburb','Complex / Property name','Street address','Make','Model','Size (mm)','Serial No.','Backflow ID','Location','Latitude','Longitude','Scheduled Month','Last Tested','Test Result','Tested By','Notes']];
   devices.forEach(d=>{
     const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
-    rows.push([d.suburb,d.make,d.model,d.size,d.serial,d.backflowId||'',d.location,d.lat||'',d.lng||'',d.scheduledMonth||'',d.testDate||'',d.testResult||'Pending',lastLog?lastLog.tester:'',d.notes||'']);
+    rows.push([d.suburb,d.complex||'',d.address||'',d.make,d.model,d.size,d.serial,d.backflowId||'',d.location,d.lat||'',d.lng||'',d.scheduledMonth||'',d.testDate||'',d.testResult||'Pending',lastLog?lastLog.tester:'',d.notes||'']);
   });
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const a=document.createElement('a');

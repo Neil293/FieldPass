@@ -4472,10 +4472,10 @@ function showEmailModal(subject, body, to='', cc='', suburb=''){
 }
 
 function exportCSV(){
-  const rows=[['Suburb','Complex / Property name','Street address','Make','Model','Size (mm)','Serial No.','Backflow ID','Location','Latitude','Longitude','Scheduled Month','Last Tested','Test Result','Tested By','Notes']];
+  const rows=[['Suburb','Complex / Property name','Street address','Latitude','Longitude','Make','Model','Size (mm)','Serial No.','Backflow ID','Location','Scheduled Month','Last Tested','Test Result','Tested By','Notes']];
   devices.forEach(d=>{
     const lastLog=d.testLog&&d.testLog.length?d.testLog[d.testLog.length-1]:null;
-    rows.push([d.suburb,d.complex||'',d.address||'',d.make,d.model,d.size,d.serial,d.backflowId||'',d.location,d.lat||'',d.lng||'',d.scheduledMonth||'',d.testDate||'',d.testResult||'Pending',lastLog?lastLog.tester:'',d.notes||'']);
+    rows.push([d.suburb,d.complex||'',d.address||'',d.lat||'',d.lng||'',d.make,d.model,d.size,d.serial,d.backflowId||'',d.location,d.scheduledMonth||'',d.testDate||'',d.testResult||'Pending',lastLog?lastLog.tester:'',d.notes||'']);
   });
   const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const a=document.createElement('a');

@@ -3913,6 +3913,15 @@ function saveFailNotes(){
   const notes=document.getElementById('fail-notes-input').value.trim();
   if(notes) document.getElementById('f-notes').value=notes;
   document.getElementById('fail-notes-popup').remove();
+  // Copy summary to clipboard
+  const d=devices.find(x=>x.id===editId);
+  if(d){
+    const suburb=document.getElementById('e-suburb').value.trim()||d.suburb||'';
+    const serial=document.getElementById('e-serial').value.trim()||d.serial||'';
+    const location=document.getElementById('e-loc').value.trim()||d.location||'';
+    const parts=[suburb,serial,location,notes].filter(Boolean);
+    navigator.clipboard&&navigator.clipboard.writeText(parts.join(' - ')).catch(()=>{});
+  }
   saveTest();
 }
 

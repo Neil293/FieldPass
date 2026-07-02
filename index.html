@@ -2214,6 +2214,9 @@ function metricFilter(statuses, clearMonth){
     const mobFsm=document.getElementById('mob-f-month');
     if(fsm) fsm.value='';
     if(mobFsm) mobFsm.value='';
+    // Also clear suburb — stat tiles show global counts so the result should be global
+    const sub=document.getElementById('f-suburb');
+    if(sub) sub.value='';
   }
   syncStatusPillStyles();
   renderMonthPills();

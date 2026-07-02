@@ -2416,6 +2416,14 @@ function render(){
 }
 
 const FILTER_STATE_KEY='ct_filter_state_v1';
+const SUBURB_EXPAND_KEY='ct_suburb_expand_v1';
+function getSuburbExpanded(){try{return JSON.parse(localStorage.getItem(SUBURB_EXPAND_KEY)||'{}');}catch(e){return{};}}
+function toggleSuburbExpand(suburb){
+  const ex=getSuburbExpanded();
+  ex[suburb]=!ex[suburb];
+  try{localStorage.setItem(SUBURB_EXPAND_KEY,JSON.stringify(ex));}catch(e){}
+  renderReport('suburb');
+}
 function saveFilterState(){
   try{
     localStorage.setItem(FILTER_STATE_KEY,JSON.stringify({
@@ -3764,12 +3772,16 @@ function renderReport(tab){
   const ry=reportYear; // use selected year for all status calculations in report
 
   if(tab==='suburb'){
-    // Group by suburb, count by status
+    const sBg={complete:'var(--green-bg)',repaired:'#e3f0fc',failed:'var(--red-bg)',overdue:'var(--red-bg)',due:'#fef6e6',due_next:'#e3f0fc',upcoming:'#f0f7ff',pending:'var(--surface2)',decommissioned:'#f0f0f0'};
+    const sCol={complete:'var(--green)',repaired:'#1565c0',failed:'var(--red)',overdue:'var(--red)',due:'#e67e22',due_next:'#1976d2',upcoming:'#64b5f6',pending:'var(--text3)',decommissioned:'#888'};
+    const expanded=getSuburbExpanded();
+    // Group by suburb, count by status, keep device refs
     const suburbs={};
     activeDevices.forEach(d=>{
       const s=d.suburb||'Unknown';
-      if(!suburbs[s]) suburbs[s]={total:0,complete:0,failed:0,overdue:0,due:0,repaired:0,decommissioned:0,pending:0,other:0};
+      if(!suburbs[s]) suburbs[s]={total:0,complete:0,failed:0,overdue:0,due:0,repaired:0,decommissioned:0,pending:0,other:0,devs:[]};
       suburbs[s].total++;
+      suburbs[s].devs.push(d);
       const st=getStatusForYear(d,ry);
       if(suburbs[s][st]!==undefined) suburbs[s][st]++;
       else suburbs[s].other++;
@@ -3795,28 +3807,49 @@ function renderReport(tab){
           <div style="font-size:11px;color:var(--red);margin-top:2px">Overdue</div>
         </div>
       </div>
-      <!-- Suburb table -->
+      <!-- Suburb list -->
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">${sorted.length} suburbs</div>
       <div style="display:flex;flex-direction:column;gap:6px">
         ${sorted.map(([suburb,c])=>{
           const pct=c.total?Math.round(((c.complete+c.repaired)/c.total)*100):0;
           const hasIssue=c.overdue>0||c.failed>0;
-          return`<div onclick="showSuburbDrilldown('${suburb.replace(/'/g,"\\'")}')" style="background:var(--surface);border-radius:12px;border:1px solid ${hasIssue?'rgba(184,50,50,.2)':'var(--border2)'};padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,.08)'" onmouseleave="this.style.boxShadow='none'">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${suburb}</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <span style="font-size:11px;color:var(--text3)">${c.total} devices</span>
-                ${c.complete+c.repaired>0?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ ${c.complete+c.repaired} done</span>`:''}
-                ${c.overdue>0?`<span style="font-size:11px;color:var(--red);font-weight:600">⚠ ${c.overdue} overdue</span>`:''}
-                ${c.failed>0?`<span style="font-size:11px;color:var(--red);font-weight:500">✗ ${c.failed} failed</span>`:''}
-                ${c.due>0?`<span style="font-size:11px;color:var(--amber);font-weight:500">${c.due} due</span>`:''}
+          const isOpen=!!expanded[suburb];
+          const safeSuburb=suburb.replace(/'/g,"\\'");
+          const deviceRows=c.devs.map(d=>{
+            const st=getStatusForYear(d,ry);
+            const bfCode=d.backflowId?` · ${extractBfCode(d.backflowId)}`:'';
+            const dateStr=d.testDate?(()=>{const[y,m,day]=d.testDate.split('-');return day+'/'+m+'/'+y;})():'Not tested';
+            return`<div onclick="closeReports();openDevice(${d.id})" style="background:${sBg[st]||'var(--surface)'};border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:9px 11px;cursor:pointer;display:flex;align-items:center;gap:10px">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:600;color:var(--text)">${d.make} ${d.model} <span style="font-weight:400;color:var(--text2)">${d.size}mm</span></div>
+                <div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.location||''}</div>
+                <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">S/N: ${d.serial||'—'}${bfCode}</div>
               </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:11px;font-weight:600;color:${sCol[st]||'var(--text2)'}">${statusBadge(d).replace(/<[^>]+>/g,'').trim()}</div>
+                <div style="font-size:10px;color:var(--text3)">${dateStr}</div>
+              </div>
+            </div>`;
+          }).join('');
+          return`<div style="background:var(--surface);border-radius:12px;border:1px solid ${hasIssue?'rgba(184,50,50,.2)':'var(--border2)'};overflow:hidden">
+            <div onclick="toggleSuburbExpand('${safeSuburb}')" style="padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${suburb}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="font-size:11px;color:var(--text3)">${c.total} devices</span>
+                  ${c.complete+c.repaired>0?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ ${c.complete+c.repaired} done</span>`:''}
+                  ${c.overdue>0?`<span style="font-size:11px;color:var(--red);font-weight:600">⚠ ${c.overdue} overdue</span>`:''}
+                  ${c.failed>0?`<span style="font-size:11px;color:var(--red);font-weight:500">✗ ${c.failed} failed</span>`:''}
+                  ${c.due>0?`<span style="font-size:11px;color:var(--amber);font-weight:500">${c.due} due</span>`:''}
+                </div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:18px;font-weight:700;color:${pct===100?'var(--green)':pct>50?'var(--amber)':'var(--text2)'}">${pct}%</div>
+                <div style="font-size:10px;color:var(--text3)">complete</div>
+              </div>
+              <span style="color:var(--text3);font-size:16px;transition:transform .2s;display:inline-block;transform:${isOpen?'rotate(90deg)':''}">›</span>
             </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="font-size:18px;font-weight:700;color:${pct===100?'var(--green)':pct>50?'var(--amber)':'var(--text2)'}">${pct}%</div>
-              <div style="font-size:10px;color:var(--text3)">complete</div>
-            </div>
-            <div style="color:var(--text3);font-size:16px">›</div>
+            ${isOpen?`<div style="border-top:1px solid var(--border2);padding:8px 12px 12px;display:flex;flex-direction:column;gap:5px">${deviceRows}</div>`:''}
           </div>`;
         }).join('')}
       </div>`;

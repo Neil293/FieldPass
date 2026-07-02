@@ -1569,8 +1569,15 @@ function load(){
   }
   updateClientUI();
   populateSuburbFilter();
-  const currentMonthName=MONTH_NAMES[new Date().getMonth()];
-  document.getElementById('f-sched-month').value=currentMonthName;
+  // Restore saved filters; fall back to current month if none saved
+  restoreFilterState();
+  if(!localStorage.getItem(FILTER_STATE_KEY)){
+    document.getElementById('f-sched-month').value=MONTH_NAMES[new Date().getMonth()];
+  }
+  if(window._restoredSuburb){
+    document.getElementById('f-suburb').value=window._restoredSuburb;
+    window._restoredSuburb='';
+  }
   render();
   // If map is open, refresh its markers
   if(leafletMap&&document.getElementById('map-modal').style.display!=='none'){
@@ -2389,6 +2396,33 @@ function render(){
 
   const ab=document.getElementById('alert-area');
   ab.innerHTML='';
+
+  // Persist filter state so it survives refresh
+  saveFilterState();
+}
+
+const FILTER_STATE_KEY='ct_filter_state_v1';
+function saveFilterState(){
+  try{
+    localStorage.setItem(FILTER_STATE_KEY,JSON.stringify({
+      statuses:[...window._activeStatuses],
+      month:document.getElementById('f-sched-month').value,
+      suburb:document.getElementById('f-suburb').value||''
+    }));
+  }catch(e){}
+}
+function restoreFilterState(){
+  try{
+    const raw=localStorage.getItem(FILTER_STATE_KEY);
+    if(!raw) return;
+    const s=JSON.parse(raw);
+    if(s.statuses) window._activeStatuses=new Set(s.statuses);
+    const monthEl=document.getElementById('f-sched-month');
+    if(monthEl&&s.month!==undefined) monthEl.value=s.month;
+    // Suburb is set after populateSuburbFilter() runs — handled at startup
+    window._restoredSuburb=s.suburb||'';
+    syncStatusPillStyles();
+  }catch(e){}
 }
 
 // Extract short unique code from a Backflow ID (URL or plain text)

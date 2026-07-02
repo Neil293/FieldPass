@@ -71,7 +71,8 @@ main{max-width:1200px;margin:0 auto;padding:1.5rem 1.25rem 4rem;overflow-x:hidde
 .page-hdr h1{font-size:22px;font-weight:600;letter-spacing:-0.02em}
 .page-hdr p{color:var(--text2);font-size:13px;margin-top:3px}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
-.metric{background:var(--surface);border-radius:var(--rl);border:1px solid var(--border2);padding:16px 18px}
+.metric{background:var(--surface);border-radius:var(--rl);border:1px solid var(--border2);padding:16px 18px;transition:background .15s,border-color .15s}
+.metric:hover{background:var(--surface2);border-color:var(--accent)}
 .mlabel{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
 .mval{font-size:28px;font-weight:300;letter-spacing:-0.03em}
 .mval.danger{color:var(--red)}
@@ -2206,6 +2207,19 @@ function renderMonthPills(){
   }
 }
 
+function metricFilter(statuses, clearMonth){
+  window._activeStatuses=new Set(statuses);
+  if(clearMonth){
+    const fsm=document.getElementById('f-sched-month');
+    const mobFsm=document.getElementById('mob-f-month');
+    if(fsm) fsm.value='';
+    if(mobFsm) mobFsm.value='';
+  }
+  syncStatusPillStyles();
+  renderMonthPills();
+  render();
+}
+
 function filterByStatus(status){
   const allStatuses=new Set(['overdue','due','due_next','upcoming','complete','failed','pending','repaired','decommissioned']);
   const cur=window._activeStatuses||allStatuses;
@@ -2366,10 +2380,10 @@ function render(){
     const monthFailed=monthDevices.filter(d=>getStatus(d)==='failed').length;
     const monthRemaining=monthTotal-monthTested-monthFailed;
     document.getElementById('metrics').innerHTML=`
-      <div class="metric"><div class="mlabel">${fsm} — Total due</div><div class="mval">${monthTotal}</div><div class="msub">Valves scheduled this month</div></div>
-      <div class="metric"><div class="mlabel">${fsm} — Tested</div><div class="mval ok">${monthTested}</div><div class="msub">${monthTotal?Math.round((monthTested/monthTotal)*100):0}% complete</div></div>
-      <div class="metric"><div class="mlabel">${fsm} — Remaining</div><div class="mval ${monthRemaining>0?'warn':''}">${monthRemaining}</div><div class="msub">Still to be tested</div></div>
-      <div class="metric"><div class="mlabel">${fsm} — Failed</div><div class="mval ${monthFailed>0?'danger':''}">${monthFailed}</div><div class="msub">${monthFailed>0?'Require attention':'None failed'}</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['overdue','due','due_next','upcoming','complete','failed','pending','repaired'],false)"><div class="mlabel">${fsm} — Total due</div><div class="mval">${monthTotal}</div><div class="msub">Valves scheduled this month</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['complete','repaired'],false)"><div class="mlabel">${fsm} — Tested</div><div class="mval ok">${monthTested}</div><div class="msub">${monthTotal?Math.round((monthTested/monthTotal)*100):0}% complete</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['overdue','due','due_next','upcoming','pending'],false)"><div class="mlabel">${fsm} — Remaining</div><div class="mval ${monthRemaining>0?'warn':''}">${monthRemaining}</div><div class="msub">Still to be tested</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['failed'],false)"><div class="mlabel">${fsm} — Failed</div><div class="mval ${monthFailed>0?'danger':''}">${monthFailed}</div><div class="msub">${monthFailed>0?'Require attention':'None failed'}</div></div>
     `;
   } else if(fst&&fst.size<9){
     // Status filter active — show filter-contextual metrics
@@ -2380,17 +2394,17 @@ function render(){
     const allFailed=activeDevices.filter(d=>getStatus(d)==='failed').length;
     const remaining=filtered.filter(d=>!['complete','repaired','failed','decommissioned'].includes(getStatus(d))).length;
     document.getElementById('metrics').innerHTML=`
-      <div class="metric"><div class="mlabel">Today</div><div class="mval ${todayCount>0?'ok':''}">${todayCount}</div><div class="msub">Tested today</div></div>
-      <div class="metric"><div class="mlabel">Total</div><div class="mval">${periodTotal}</div><div class="msub">Scheduled in ${curMonth}</div></div>
-      <div class="metric"><div class="mlabel">Failed</div><div class="mval ${allFailed>0?'danger':''}">${allFailed}</div><div class="msub">All failed devices</div></div>
-      <div class="metric"><div class="mlabel">Remaining</div><div class="mval ${remaining>0?'warn':''}">${remaining}</div><div class="msub">In current filter</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['complete','repaired','failed'],true)"><div class="mlabel">Today</div><div class="mval ${todayCount>0?'ok':''}">${todayCount}</div><div class="msub">Tested today</div></div>
+      <div class="metric" style="cursor:pointer" onclick="(()=>{const s=document.getElementById('f-sched-month');const m=document.getElementById('mob-f-month');const cm='${curMonth}';if(s)s.value=cm;if(m)m.value=cm;window._activeStatuses=new Set(['overdue','due','due_next','upcoming','complete','failed','pending','repaired','decommissioned']);syncStatusPillStyles();renderMonthPills();render();})()"><div class="mlabel">Total</div><div class="mval">${periodTotal}</div><div class="msub">Scheduled in ${curMonth}</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['failed'],true)"><div class="mlabel">Failed</div><div class="mval ${allFailed>0?'danger':''}">${allFailed}</div><div class="msub">All failed devices</div></div>
+      <div class="metric" style="cursor:pointer" onclick="(()=>{syncStatusPillStyles();renderMonthPills();render();})()"><div class="mlabel">Remaining</div><div class="mval ${remaining>0?'warn':''}">${remaining}</div><div class="msub">In current filter</div></div>
     `;
   } else {
     document.getElementById('metrics').innerHTML=`
-      <div class="metric"><div class="mlabel">Total devices</div><div class="mval">${total}</div><div class="msub">58 suburbs</div></div>
-      <div class="metric"><div class="mlabel">Overdue</div><div class="mval ${overdue>0?'danger':''}">${overdue}</div><div class="msub">${overdue>0?'Past deadline':'All current'}</div></div>
-      <div class="metric"><div class="mlabel">Due this month</div><div class="mval ${due>0?'warn':''}">${due}</div><div class="msub">Complete by end of month</div></div>
-      <div class="metric"><div class="mlabel">Complete</div><div class="mval ${pct>0?'ok':''}">${complete}</div><div class="msub">${pct}% done this year</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['overdue','due','due_next','upcoming','complete','failed','pending','repaired','decommissioned'],true)"><div class="mlabel">Total devices</div><div class="mval">${total}</div><div class="msub">58 suburbs</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['overdue'],true)"><div class="mlabel">Overdue</div><div class="mval ${overdue>0?'danger':''}">${overdue}</div><div class="msub">${overdue>0?'Past deadline':'All current'}</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['due'],true)"><div class="mlabel">Due this month</div><div class="mval ${due>0?'warn':''}">${due}</div><div class="msub">Complete by end of month</div></div>
+      <div class="metric" style="cursor:pointer" onclick="metricFilter(['complete','repaired'],true)"><div class="mlabel">Complete</div><div class="mval ${pct>0?'ok':''}">${complete}</div><div class="msub">${pct}% done this year</div></div>
     `;
   }
 

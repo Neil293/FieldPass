@@ -16,7 +16,7 @@ FieldPass is a mobile-first compliance management tool that works offline and sy
 
 ### Device Management
 - Register of 570+ backflow devices across 58 suburbs
-- Full device details: make, model, size, serial number, Backflow ID, location, GPS coordinates
+- Full device details: make, model, size, serial number, Backflow ID, complex/property name, street address, location, GPS coordinates
 - Add, edit and delete devices (admin only, password protected)
 - Delete individual test history records (admin only)
 - QR code generation for each device location (Google Maps link)
@@ -24,7 +24,8 @@ FieldPass is a mobile-first compliance management tool that works offline and sy
 
 ### Test Recording
 - One-tap **Pass**, **Fail**, **Repaired** and **Decommissioned** action buttons
-- Fail and Repaired actions prompt for fault/repair notes before saving
+- Fail action prompts for fault notes; saving automatically copies `SUBURB - serial - location - notes` to clipboard
+- Repaired action prompts for repair notes before saving
 - Option to automatically follow the Backflow ID URL after recording a result
 - Full test history log per device with tester name and timestamp
 - Undo last result (tap the result banner to revert)
@@ -51,6 +52,7 @@ Each device is automatically assigned a status based on its scheduled month and 
 - Month quick-select pills bar (previous, current, next month)
 - **Sort by nearest** — uses device GPS and your current location (Haversine distance)
 - Save your phone's GPS location for use on desktop devices
+- Filter state (active pills, month, suburb) **persists across page refreshes**
 
 ### QR Code Scanning
 - Scan a Backflow ID QR from the main screen to instantly open the matching device
@@ -65,13 +67,21 @@ Each device is automatically assigned a status based on its scheduled month and 
 - Pick-on-map GPS coordinate picker when adding or editing devices
 - Direct link to Google Maps for each device
 
+### Stat Tiles
+
+The four metric tiles at the top of the device list are **tappable shortcuts**. Tap any tile to instantly filter the list to that category:
+
+- **Default view:** Total devices / Overdue / Due this month / Complete
+- **Status filter active:** Today tested / Total in current month / Failed / Remaining in filter
+- **Month filter active:** Total due / Tested / Remaining / Failed — keeps month filter, narrows by status
+
 ### Reports
 Access via **☰ Menu → Reports** or the **Reports** button in the desktop nav bar.
 
 | Tab | Contents |
 |---|---|
 | 📍 By Suburb | Total, complete and overdue counts per suburb with completion % |
-| 📅 By Month | All 12 months with device counts, completion % and progress bars |
+| 📅 By Month | All 12 months with device counts, completion % and progress bars — tap a month card to expand per-suburb breakdown |
 | 📊 By Status | Count and % breakdown for every status |
 | ✗ Failed | All failed devices grouped by suburb — tap to open device |
 | ⚠ Overdue | All overdue devices grouped by suburb — tap to open device |
@@ -86,6 +96,7 @@ Access via **☰ Menu → Reports** or the **Reports** button in the desktop nav
 
 ### Offline / PWA
 - Installable as a home screen app on iOS and Android
+- **Install app** button in Settings → manually trigger the install prompt on Android or shows Share → Add to Home Screen instructions on iOS
 - Service worker caches app shell and map tiles
 - All data stored in browser localStorage as primary store
 - Firebase Firestore for real-time sync across devices (single-document strategy)
@@ -103,10 +114,12 @@ Access via **☰ Menu → Reports** or the **Reports** button in the desktop nav
 
 ```
 /
-├── index.html      # Entire app (single-file PWA, ~270KB)
+├── index.html      # Entire app (single-file PWA, ~280KB)
 ├── data.js         # Seed device data (window.SEED_DATA)
 ├── sw.js           # Service worker for offline caching
 ├── manifest.json   # PWA manifest (icons, theme, display)
+├── icon-192.png    # PWA icon 192×192
+├── icon-512.png    # PWA icon 512×512
 └── README.md       # This file
 ```
 

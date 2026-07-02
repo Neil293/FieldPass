@@ -126,9 +126,9 @@ Stat tiles have a hover/tap highlight: `.metric:hover { background: var(--surfac
 
 - **Map tiles** (`complytrack-tiles-v1`): cache-first, persistent
 - **CDN resources**: cache-first with network fallback
-- **App files** (`fieldpass-v25`): network-first with cache fallback
+- **App files** (`fieldpass-v26`): network-first with cache fallback
 
-When updating cached resources, bump the `CACHE_NAME` constant in `sw.js` (currently `fieldpass-v25`).
+When updating cached resources, bump the `CACHE_NAME` constant in `sw.js` (currently `fieldpass-v26`).
 
 ### PWA Install
 

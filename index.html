@@ -4176,6 +4176,10 @@ if(window.visualViewport){
 function closeModal(){
   document.getElementById('modal').style.display='none';
   document.body.classList.remove('modal-open');
+  // Clear any maxHeight set by the visualViewport keyboard handler so the
+  // sheet isn't stuck at the shrunken keyboard height next time it opens
+  const sheet=document.getElementById('modal-sheet');
+  if(sheet) sheet.style.maxHeight='';
 }
 function bgClose(e){if(e.target===document.getElementById('modal'))closeModal();}
 

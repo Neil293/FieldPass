@@ -3909,10 +3909,28 @@ function showNotesPopup(type){
   },50);
 }
 
+function _closeFailPopup(cb){
+  // Blur any focused input first so iOS keyboard dismisses before we remove
+  // the popup — prevents the device modal from getting stuck at half-screen
+  // after the keyboard restores the visual viewport
+  if(document.activeElement) document.activeElement.blur();
+  setTimeout(()=>{
+    const p=document.getElementById('fail-notes-popup');
+    if(p) p.remove();
+    // Force the device modal to repaint at the correct viewport position
+    const modal=document.getElementById('modal');
+    if(modal&&modal.style.display!=='none'){
+      modal.style.display='none';
+      modal.offsetHeight; // flush layout
+      modal.style.display='flex';
+    }
+    if(cb) cb();
+  },80);
+}
+
 function saveFailNotes(){
   const notes=document.getElementById('fail-notes-input').value.trim();
   if(notes) document.getElementById('f-notes').value=notes;
-  document.getElementById('fail-notes-popup').remove();
   // Copy summary to clipboard
   const d=devices.find(x=>x.id===editId);
   if(d){
@@ -3922,12 +3940,11 @@ function saveFailNotes(){
     const parts=[suburb,serial,location,notes].filter(Boolean);
     navigator.clipboard&&navigator.clipboard.writeText(parts.join(' - ')).catch(()=>{});
   }
-  saveTest();
+  _closeFailPopup(()=>saveTest());
 }
 
 function skipFailNotes(){
-  document.getElementById('fail-notes-popup').remove();
-  saveTest();
+  _closeFailPopup(()=>saveTest());
 }
 
 function markUntested(){

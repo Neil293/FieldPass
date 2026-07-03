@@ -2423,8 +2423,6 @@ function render(){
 const FILTER_STATE_KEY='ct_filter_state_v1';
 const SUBURB_EXPAND_KEY='ct_suburb_expand_v1';
 function getSuburbExpanded(){try{return JSON.parse(localStorage.getItem(SUBURB_EXPAND_KEY)||'{}');}catch(e){return{};}}
-function toggleSuburbExpand(suburb){
-
 const MAIN_SUBURB_COLLAPSE_KEY='ct_main_suburb_collapse_v1';
 function getMainSuburbCollapsed(){try{return JSON.parse(localStorage.getItem(MAIN_SUBURB_COLLAPSE_KEY)||'{}');}catch(e){return{};}}
 function toggleMainSuburb(suburb){

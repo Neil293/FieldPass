@@ -6650,6 +6650,10 @@ if('serviceWorker' in navigator){
       .then(reg=>console.log('SW registered, scope:', reg.scope))
       .catch(err=>console.log('SW registration failed:', err));
   });
+  // Auto-reload when a new service worker activates so users always get fresh code
+  navigator.serviceWorker.addEventListener('message', e=>{
+    if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
+  });
 }
 
 let _installPrompt=null;

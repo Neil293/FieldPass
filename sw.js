@@ -1,5 +1,5 @@
 // ComplyTrack Service Worker — offline support
-const CACHE_NAME = 'fieldpass-v29';
+const CACHE_NAME = 'fieldpass-v30';
 const TILE_CACHE = 'complytrack-tiles-v1';
 
 // App shell files to cache on install
@@ -32,6 +32,9 @@ self.addEventListener('activate', event => {
         .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({type:'window'}).then(clients => {
+        clients.forEach(c => c.postMessage({type:'SW_UPDATED'}));
+      }))
   );
 });
 

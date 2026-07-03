@@ -2349,8 +2349,9 @@ function render(){
       const statusSpan=allDone
         ?`<span style="font-size:11px;font-weight:600;color:var(--green);background:var(--green-bg);padding:2px 8px;border-radius:20px;border:1px solid rgba(26,102,54,.2)">✓ Complete</span>`
         :`<span style="font-size:11px;color:${progColour};font-weight:500">${cxComplete}/${cxTotal}</span>`;
-      html+=`<tr class="grp-hdr"><td colspan="10" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-        <span>${cx} <span style="font-weight:400;opacity:.6">(${cxTotal})</span></span>
+      const safeCx=cx.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      html+=`<tr class="grp-hdr" data-suburb-hdr="${cx.replace(/"/g,'&quot;')}"><td colspan="10" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <span onclick="toggleMainSuburb('${safeCx}')" style="cursor:pointer;display:flex;align-items:center;gap:5px;flex:1;min-width:0">${cx} <span style="font-weight:400;opacity:.6">(${cxTotal})</span><span class="suburb-chev" style="font-size:12px;color:var(--text3);transition:transform .2s;display:inline-block">▾</span></span>
         <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${statusSpan}${sentBadge}${emailBtn}</span>
       </td></tr>`;
       groups[cx].forEach(d=>html+=deviceRow(d,true));
@@ -2367,6 +2368,7 @@ function render(){
     });
   }
   tbody.innerHTML=html;
+  applyMainSuburbCollapsed();
 
   const activeDevices=devices.filter(d=>getStatus(d)!=='decommissioned');
   const total=activeDevices.length;
@@ -2421,6 +2423,29 @@ function render(){
 const FILTER_STATE_KEY='ct_filter_state_v1';
 const SUBURB_EXPAND_KEY='ct_suburb_expand_v1';
 function getSuburbExpanded(){try{return JSON.parse(localStorage.getItem(SUBURB_EXPAND_KEY)||'{}');}catch(e){return{};}}
+function toggleSuburbExpand(suburb){
+
+const MAIN_SUBURB_COLLAPSE_KEY='ct_main_suburb_collapse_v1';
+function getMainSuburbCollapsed(){try{return JSON.parse(localStorage.getItem(MAIN_SUBURB_COLLAPSE_KEY)||'{}');}catch(e){return{};}}
+function toggleMainSuburb(suburb){
+  const col=getMainSuburbCollapsed();
+  col[suburb]=!col[suburb];
+  try{localStorage.setItem(MAIN_SUBURB_COLLAPSE_KEY,JSON.stringify(col));}catch(e){}
+  const isNowCollapsed=col[suburb];
+  document.querySelectorAll('[data-suburb="'+suburb.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"]').forEach(r=>{r.style.display=isNowCollapsed?'none':'';});
+  const hdr=document.querySelector('[data-suburb-hdr="'+suburb.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"]');
+  if(hdr){const chev=hdr.querySelector('.suburb-chev');if(chev)chev.style.transform=isNowCollapsed?'rotate(-90deg)':'';}
+}
+function applyMainSuburbCollapsed(){
+  const col=getMainSuburbCollapsed();
+  Object.keys(col).forEach(suburb=>{
+    if(!col[suburb]) return;
+    document.querySelectorAll('[data-suburb="'+suburb.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"]').forEach(r=>{r.style.display='none';});
+    const hdr=document.querySelector('[data-suburb-hdr="'+suburb.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"]');
+    if(hdr){const chev=hdr.querySelector('.suburb-chev');if(chev)chev.style.transform='rotate(-90deg)';}
+  });
+}
+
 function toggleSuburbExpand(suburb){
   const ex=getSuburbExpanded();
   ex[suburb]=!ex[suburb];
@@ -2490,7 +2515,7 @@ function deviceRow(d,hideSuburb){
   const distLabel=d._dist!=null
     ?`<span style="font-size:10px;color:var(--accent);font-weight:600;background:var(--accent-light);padding:1px 6px;border-radius:10px;white-space:nowrap">${d._dist<1?(d._dist*1000).toFixed(0)+'m':d._dist.toFixed(1)+'km'}</span>`
     :'';
-  return`<tr class="${rowClass}" onclick="${d.id!=null?`openDevice(${d.id})`:''}">`+
+  return`<tr class="${rowClass}" data-suburb="${(d.suburb||'').replace(/"/g,'&quot;')}" onclick="${d.id!=null?`openDevice(${d.id})`:''}">`+
     `<td><a href="${url}" target="_blank" class="map-btn${hasGps?'':' no-gps'}" onclick="event.stopPropagation()">
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 0.5C3.07 0.5 1.5 2.07 1.5 4c0 2.5 3.5 6 3.5 6s3.5-3.5 3.5-6C8.5 2.07 6.93 0.5 5 0.5z" fill="currentColor" opacity=".8"/><circle cx="5" cy="4" r="1.2" fill="white"/></svg>
       ${hasGps?'GPS':'Maps'}

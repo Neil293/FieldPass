@@ -103,6 +103,8 @@ tbody tr.row-fail{background:#fadadd;border-left:4px solid #b83232}
 tbody tr.row-fail:hover{background:#f5c6c6}
 tbody tr.row-repaired{background:#e3f0fc;border-left:4px solid #1565c0}
 tbody tr.row-repaired:hover{background:#cce0f5}
+tbody tr.row-no-access{background:#fff3e0;border-left:4px solid #e65100}
+tbody tr.row-no-access:hover{background:#ffe0b2}
 tbody tr.row-decommissioned{background:#f0f0f0;border-left:4px solid #888;opacity:.7}
 tbody tr.row-decommissioned:hover{background:#e8e8e8}
 td{padding:11px 14px;font-size:13px;vertical-align:middle}
@@ -220,6 +222,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
   tbody tr.row-complete{background:#d4f0dc;border:1px solid #a8d9b5;box-shadow:0 1px 4px rgba(26,102,54,.12)}
   tbody tr.row-fail{background:#fadadd;border:1px solid #f0b8bb;box-shadow:0 1px 4px rgba(184,50,50,.12)}
   tbody tr.row-repaired{background:#e3f0fc;border:1px solid #a8c8ef;box-shadow:0 1px 4px rgba(21,101,192,.12)}
+  tbody tr.row-no-access{background:#fff3e0;border:1px solid #ffcc80;box-shadow:0 1px 4px rgba(230,81,0,.12)}
   tbody tr.row-decommissioned{background:#f0f0f0;border:1px solid #ccc;opacity:.75}
   tbody tr:hover{background:var(--surface)}
   td{padding:0;border:none}
@@ -544,6 +547,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
       <button onclick="toggleStatusPill('due_next',this)" data-status="due_next" style="font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Next month</button>
       <button onclick="toggleStatusPill('upcoming',this)" data-status="upcoming" style="font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Upcoming</button>
       <button onclick="toggleStatusPill('failed',this)" data-status="failed" style="font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Failed</button>
+      <button onclick="toggleStatusPill('no_access',this)" data-status="no_access" style="font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">No Access</button>
       <button onclick="toggleStatusPill('complete',this)" data-status="complete" style="font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Complete</button>
       <button onclick="toggleStatusPill('repaired',this)" data-status="repaired" style="font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Repaired</button>
       <button onclick="toggleStatusPill('decommissioned',this)" data-status="decommissioned" style="font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);cursor:pointer">Decommissioned</button>
@@ -778,7 +782,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         <div class="frow">
           <div class="field"><label>Test date</label><input type="date" id="f-date"></div>
           <div class="field"><label>Result</label>
-            <select id="f-result2"><option>Pending</option><option>Pass</option><option>Fail</option><option>Repaired</option><option>Decommissioned</option></select>
+            <select id="f-result2"><option>Pending</option><option>Pass</option><option>Fail</option><option>No Access</option><option>Repaired</option><option>Decommissioned</option></select>
           </div>
         </div>
         <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Test observations, follow-up actions…"></textarea></div>
@@ -878,7 +882,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     <div class="frow">
       <div class="field"><label>Last tested</label><input type="date" id="a-date"></div>
       <div class="field"><label>Test result</label>
-        <select id="a-result"><option>Pending</option><option>Pass</option><option>Fail</option><option>Repaired</option><option>Decommissioned</option></select>
+        <select id="a-result"><option>Pending</option><option>Pass</option><option>Fail</option><option>No Access</option><option>Repaired</option><option>Decommissioned</option></select>
       </div>
     </div>
     <div class="field"><label>Notes</label><textarea id="a-notes" placeholder="Any notes&#x2026;"></textarea></div>
@@ -1988,7 +1992,7 @@ function switchClient(id){
   setActiveClientId(id);
   document.getElementById('search').value='';
   document.getElementById('f-suburb').value='';
-  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
+  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','no_access','complete','pending','repaired','decommissioned']);
   load();
   if(window._firebaseReady) startFirebaseListener();
 }
@@ -2059,6 +2063,7 @@ function getStatusForYear(d, year){
   if(d.testDate){
     const ty=parseInt(d.testDate.slice(0,4));
     if(d.testResult==='Decommissioned') return'decommissioned';
+    if(d.testResult==='No Access') return'no_access';
     if(d.testResult==='Repaired'&&ty===year) return'repaired';
     if(ty===year){
       if(d.testResult==='Fail') return'failed';
@@ -2085,6 +2090,7 @@ function statusBadge(d){
     upcoming:'<span class="badge b-upcoming"><span class="bdot"></span>Upcoming</span>',
     complete:'<span class="badge b-complete"><span class="bdot"></span>Complete</span>',
     failed:'<span class="badge b-failed"><span class="bdot"></span>Failed</span>',
+    no_access:'<span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid rgba(230,81,0,.2)"><span class="bdot" style="background:#e65100"></span>No Access</span>',
     repaired:'<span class="badge" style="background:#e3f0fc;color:#1565c0;border:1px solid rgba(21,101,192,.2)"><span class="bdot" style="background:#1565c0"></span>Repaired</span>',
     decommissioned:'<span class="badge" style="background:#f0f0f0;color:#555;border:1px solid rgba(0,0,0,.1)"><span class="bdot" style="background:#888"></span>Decommissioned</span>',
     pending:'<span class="badge b-pend"><span class="bdot"></span>Pending</span>'
@@ -2109,7 +2115,7 @@ function fmtDate(d){
 
 // ── Multi-select status filter ───────────────────────────
 // Default: show overdue + due this month
-window._activeStatuses = new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
+window._activeStatuses = new Set(['overdue','due','due_next','upcoming','failed','no_access','complete','pending','repaired','decommissioned']);
 
 const STATUS_COLOURS = {
   overdue:        {on:'#c0392b', label:'Overdue'},
@@ -2117,19 +2123,20 @@ const STATUS_COLOURS = {
   due_next:       {on:'#1976d2', label:'Next month'},
   upcoming:       {on:'#64b5f6', label:'Upcoming'},
   failed:         {on:'#b83232', label:'Failed'},
+  no_access:      {on:'#e65100', label:'No Access'},
   complete:       {on:'#1a6636', label:'Complete'},
   repaired:       {on:'#1565c0', label:'Repaired'},
   decommissioned: {on:'#666',    label:'Decommissioned'},
 };
 
 function setAllStatuses(){
-  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
+  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','no_access','complete','pending','repaired','decommissioned']);
   syncStatusPillStyles();
   render();
 }
 
 function resetStatusFilter(){
-  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','complete','pending','repaired','decommissioned']);
+  window._activeStatuses=new Set(['overdue','due','due_next','upcoming','failed','no_access','complete','pending','repaired','decommissioned']);
   syncStatusPillStyles();
   render();
 }
@@ -2178,13 +2185,14 @@ function renderMonthPills(){
   const dueCount=devices.filter(d=>getStatus(d)==='due').length;
   const dueNextCount=devices.filter(d=>getStatus(d)==='due_next').length;
   const failedCount=devices.filter(d=>getStatus(d)==='failed').length;
+  const noAccessCount=devices.filter(d=>getStatus(d)==='no_access').length;
 
   const activeStatuses=window._activeStatuses||new Set();
   const mkPill=(label,status,count,colour,bg)=>{
     if(count===0&&(status==='overdue'||status==='failed'||status==='due'||status==='due_next')) return '';
     const isOn=activeStatuses.has(status)&&![...activeStatuses].some(s=>s!==status&&s!=='all');
     // Pill is highlighted if it's the ONLY active status filter
-    const allOn=activeStatuses.size>=7; // all statuses active = no filter
+    const allOn=activeStatuses.size>=10; // all statuses active = no filter
     const isActive=!allOn&&activeStatuses.size===1&&activeStatuses.has(status);
     return`<button onclick="filterByStatus('${status}')" style="font-family:var(--sans);font-size:12px;font-weight:${isActive?'700':'500'};padding:5px 12px;border-radius:20px;border:1px solid ${isActive?'transparent':'rgba(0,0,0,.12)'};background:${isActive?colour:'var(--surface)'};color:${isActive?'#fff':colour};cursor:pointer;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:4px">
       ${label} <span style="font-size:10px;background:${isActive?'rgba(255,255,255,.25)':bg};color:${isActive?'#fff':colour};padding:1px 6px;border-radius:10px;font-weight:700">${count}</span>
@@ -2195,7 +2203,8 @@ function renderMonthPills(){
     mkPill('Overdue','overdue',overdueCount,'var(--red)','var(--red-bg)')+
     mkPill('Due','due',dueCount,'#e67e22','#fef6e6')+
     mkPill('Next month','due_next',dueNextCount,'#1976d2','#e3f0fc')+
-    mkPill('Failed','failed',failedCount,'var(--red)','var(--red-bg)');
+    mkPill('Failed','failed',failedCount,'var(--red)','var(--red-bg)')+
+    mkPill('No Access','no_access',noAccessCount,'#e65100','#fff3e0');
 
   // Sync pin button active state
   const pinBtn=document.getElementById('mob-pin-btn');
@@ -2390,7 +2399,7 @@ function render(){
       <div class="metric" style="cursor:pointer" onclick="metricFilter(['overdue','due','due_next','upcoming','pending'],false)"><div class="mlabel">${fsm} — Remaining</div><div class="mval ${monthRemaining>0?'warn':''}">${monthRemaining}</div><div class="msub">Still to be tested</div></div>
       <div class="metric" style="cursor:pointer" onclick="metricFilter(['failed'],false)"><div class="mlabel">${fsm} — Failed</div><div class="mval ${monthFailed>0?'danger':''}">${monthFailed}</div><div class="msub">${monthFailed>0?'Require attention':'None failed'}</div></div>
     `;
-  } else if(fst&&fst.size<9){
+  } else if(fst&&fst.size<10){
     // Status filter active — show filter-contextual metrics
     const today=localDateStr();
     const todayCount=activeDevices.filter(d=>d.testDate===today).length;
@@ -2507,9 +2516,10 @@ function deviceRow(d,hideSuburb){
   const status=getStatus(d);
   const isComplete=status==='complete';
   const isFail=status==='failed';
+  const isNoAccess=status==='no_access';
   const isRepaired=status==='repaired';
   const isDecommissioned=status==='decommissioned';
-  const rowClass=isFail?'row-fail':isComplete?'row-complete':isRepaired?'row-repaired':isDecommissioned?'row-decommissioned':'';
+  const rowClass=isFail?'row-fail':isNoAccess?'row-no-access':isComplete?'row-complete':isRepaired?'row-repaired':isDecommissioned?'row-decommissioned':'';
   const distLabel=d._dist!=null
     ?`<span style="font-size:10px;color:var(--accent);font-weight:600;background:var(--accent-light);padding:1px 6px;border-radius:10px;white-space:nowrap">${d._dist<1?(d._dist*1000).toFixed(0)+'m':d._dist.toFixed(1)+'km'}</span>`
     :'';
@@ -2606,6 +2616,10 @@ function openDevice(id){
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Fail
       </button>
+      <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:#e65100" onclick="markTestedToday('No Access')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.8"/><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        No Access
+      </button>
       <button class="btn-tested" style="flex:1;min-width:calc(50% - 4px);background:#1976d2" onclick="markTestedToday('Repaired')">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13 3l-2-2-7 7-1 3 3-1 7-7zM10 1l2 2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 14h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
         Repaired
@@ -2624,7 +2638,7 @@ function openDevice(id){
     <div class="info-item"><div class="ilabel">Serial no.</div><div class="ival mono">${d.serial||'—'}</div></div>
     <div class="info-item"><div class="ilabel">Size</div><div class="ival">${d.size?d.size+' mm':'—'}</div></div>
     <div class="info-item"><div class="ilabel">GPS</div><div class="ival mono" style="font-size:11px">${(d.lat&&d.lng)?d.lat.toFixed(4)+', '+d.lng.toFixed(4):'No GPS'}</div></div>
-    ${lastLog?`<div class="info-item" style="grid-column:1/-1"><div class="ilabel">Last tested by</div><div class="ival">${lastLog.tester} &mdash; ${fmtDate(lastLog.date)} &mdash; <span style="color:${lastLog.result==='Pass'?'var(--green)':'var(--red)'};font-weight:500">${lastLog.result}</span></div></div>`:''}
+    ${lastLog?`<div class="info-item" style="grid-column:1/-1"><div class="ilabel">Last tested by</div><div class="ival">${lastLog.tester} &mdash; ${fmtDate(lastLog.date)} &mdash; <span style="color:${lastLog.result==='Pass'?'var(--green)':lastLog.result==='No Access'?'#e65100':'var(--red)'};font-weight:500">${lastLog.result}</span></div></div>`:''}
   `;
 
   // Show test history if permitted
@@ -2636,8 +2650,8 @@ function openDevice(id){
       const reversed=[...d.testLog].reverse().slice(0,8);
       const cards=reversed.map((l,i)=>{
         const origIdx=d.testLog.length-1-i;
-        const resultColour=l.result==='Pass'?'var(--green)':l.result==='Fail'?'var(--red)':l.result==='Repaired'?'#1565c0':'var(--text2)';
-        const resultBg=l.result==='Pass'?'var(--green-bg)':l.result==='Fail'?'var(--red-bg)':l.result==='Repaired'?'#e3f0fc':'var(--surface2)';
+        const resultColour=l.result==='Pass'?'var(--green)':l.result==='Fail'?'var(--red)':l.result==='No Access'?'#e65100':l.result==='Repaired'?'#1565c0':'var(--text2)';
+        const resultBg=l.result==='Pass'?'var(--green-bg)':l.result==='Fail'?'var(--red-bg)':l.result==='No Access'?'#fff3e0':l.result==='Repaired'?'#e3f0fc':'var(--surface2)';
         const deleteBtn=can('manageUsers')
           ?`<button onclick="deleteTestLogEntry(${d.id},${origIdx})" title="Delete record" style="font-family:var(--sans);background:none;border:none;cursor:pointer;padding:4px 6px;color:var(--red);opacity:.5;flex-shrink:0;display:flex;align-items:center" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5">
               <svg width="14" height="14" viewBox="0 0 13 13" fill="none"><path d="M1.5 3h10M4.5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M5 6v4M8 6v4M2.5 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9l.7-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -3799,7 +3813,7 @@ function renderReport(tab){
 
   if(tab==='suburb'){
     const sBg={complete:'var(--green-bg)',repaired:'#e3f0fc',failed:'var(--red-bg)',overdue:'var(--red-bg)',due:'#fef6e6',due_next:'#e3f0fc',upcoming:'#f0f7ff',pending:'var(--surface2)',decommissioned:'#f0f0f0'};
-    const sCol={complete:'var(--green)',repaired:'#1565c0',failed:'var(--red)',overdue:'var(--red)',due:'#e67e22',due_next:'#1976d2',upcoming:'#64b5f6',pending:'var(--text3)',decommissioned:'#888'};
+    const sCol={complete:'var(--green)',repaired:'#1565c0',failed:'var(--red)',no_access:'#e65100',overdue:'var(--red)',due:'#e67e22',due_next:'#1976d2',upcoming:'#64b5f6',pending:'var(--text3)',decommissioned:'#888'};
     const expanded=getSuburbExpanded();
     // Group by suburb, count by status, keep device refs
     const suburbs={};
@@ -3882,10 +3896,10 @@ function renderReport(tab){
 
   } else {
     // By status
-    const statusOrder=['overdue','due','due_next','upcoming','failed','complete','repaired','decommissioned','pending'];
-    const statusLabels={overdue:'Overdue',due:'Due this month',due_next:'Due next month',upcoming:'Upcoming',failed:'Failed',complete:'Complete',repaired:'Repaired',decommissioned:'Decommissioned',pending:'Pending'};
-    const statusColours={overdue:'var(--red)',due:'#e67e22',due_next:'#1976d2',upcoming:'#64b5f6',failed:'var(--red)',complete:'var(--green)',repaired:'#1565c0',decommissioned:'#888',pending:'var(--text3)'};
-    const statusBgs={overdue:'var(--red-bg)',due:'#fef6e6',due_next:'#e3f0fc',upcoming:'#f0f7ff',failed:'var(--red-bg)',complete:'var(--green-bg)',repaired:'#e3f0fc',decommissioned:'#f0f0f0',pending:'var(--surface2)'};
+    const statusOrder=['overdue','due','due_next','upcoming','failed','no_access','complete','repaired','decommissioned','pending'];
+    const statusLabels={overdue:'Overdue',due:'Due this month',due_next:'Due next month',upcoming:'Upcoming',failed:'Failed',no_access:'No Access',complete:'Complete',repaired:'Repaired',decommissioned:'Decommissioned',pending:'Pending'};
+    const statusColours={overdue:'var(--red)',due:'#e67e22',due_next:'#1976d2',upcoming:'#64b5f6',failed:'var(--red)',no_access:'#e65100',complete:'var(--green)',repaired:'#1565c0',decommissioned:'#888',pending:'var(--text3)'};
+    const statusBgs={overdue:'var(--red-bg)',due:'#fef6e6',due_next:'#e3f0fc',upcoming:'#f0f7ff',failed:'var(--red-bg)',no_access:'#fff3e0',complete:'var(--green-bg)',repaired:'#e3f0fc',decommissioned:'#f0f0f0',pending:'var(--surface2)'};
     const counts={};
     statusOrder.forEach(s=>counts[s]=0);
     activeDevices.forEach(d=>{const s=getStatus(d);if(counts[s]!==undefined)counts[s]++;});
@@ -3972,6 +3986,8 @@ function markTestedToday(result){
   }
   if(result==='Fail'){
     showFailNotesPopup();
+  } else if(result==='No Access'){
+    showNotesPopup('no_access');
   } else if(result==='Repaired'){
     showRepairedNotesPopup();
   } else {
@@ -3991,13 +4007,15 @@ function showNotesPopup(type){
   if(existing) existing.remove();
 
   const isFail=type==='fail';
-  const colour=isFail?'var(--red)':'#1565c0';
-  const title=isFail?'⚠️ Fail — Add notes':'🔧 Repaired — Add notes';
-  const subtitle=isFail?'Describe the fault or required action':'Describe the repair carried out';
+  const isNoAccess=type==='no_access';
+  const colour=isFail?'var(--red)':isNoAccess?'#e65100':'#1565c0';
+  const title=isFail?'⚠️ Fail — Add notes':isNoAccess?'🚫 No Access — Add notes':'🔧 Repaired — Add notes';
+  const subtitle=isFail?'Describe the fault or required action':isNoAccess?'Describe why access was unavailable':'Describe the repair carried out';
   const placeholder=isFail
     ?'e.g. Relief valve leaking, retesting required, valve needs replacement…'
+    :isNoAccess?'e.g. Locked gate, no keyholder available, site not accessible…'
     :'e.g. Replaced relief valve, re-seated seat, pressure tested and confirmed OK…';
-  const btnLabel=isFail?'Save fail record':'Save repair record';
+  const btnLabel=isFail?'Save fail record':isNoAccess?'Save no access record':'Save repair record';
 
   const popup=document.createElement('div');
   popup.id='fail-notes-popup';

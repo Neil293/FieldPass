@@ -985,11 +985,11 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           Force sync — push all data to cloud
         </button>
 
-        <!-- Firebase diagnostics — shown only when feature flag enabled -->
-        ${flagEnabled('firebaseDiagnostic')?`<button onclick="firebaseDiagnostic()" style="font-family:var(--sans);width:100%;padding:11px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;margin-top:4px">
+        <!-- Firebase diagnostics -->
+        <button onclick="firebaseDiagnostic()" style="font-family:var(--sans);width:100%;padding:11px;font-size:13px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;margin-top:4px">
           🔍 Test Firebase connection
         </button>
-        <div id="firebase-diag-result" style="display:none;margin-top:6px;padding:10px 12px;border-radius:var(--r);font-size:12px;font-family:var(--mono);line-height:1.7;background:var(--surface2);border:1px solid var(--border2);white-space:pre-wrap;word-break:break-all"></div>`:''}
+        <div id="firebase-diag-result" style="display:none;margin-top:6px;padding:10px 12px;border-radius:var(--r);font-size:12px;font-family:var(--mono);line-height:1.7;background:var(--surface2);border:1px solid var(--border2);white-space:pre-wrap;word-break:break-all"></div>
 
         <!-- Sync interval — admin only -->
         <div id="sync-interval-section" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:12px;margin-top:2px">

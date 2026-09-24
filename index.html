@@ -979,6 +979,19 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           &#8595; Export CSV
         </button>
 
+        <!-- Import CSV -->
+        <div>
+          <label style="font-family:var(--sans);width:100%;padding:13px;font-size:14px;font-weight:500;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M5 8l3 3 3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            &#8593; Import CSV
+            <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="importCSVSelected(this)">
+          </label>
+          <div id="csv-import-preview" style="display:none;margin-top:8px;padding:12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);font-size:13px;line-height:1.8;color:var(--text)"></div>
+          <button id="csv-import-confirm-btn" onclick="importCSVConfirm()" style="display:none;font-family:var(--sans);width:100%;margin-top:8px;padding:13px;font-size:14px;font-weight:600;border:none;border-radius:var(--r);background:var(--accent);color:#fff;cursor:pointer">
+            ✓ Confirm import
+          </button>
+        </div>
+
         <!-- Force sync -->
         <button onclick="forceSyncNow()" style="font-family:var(--sans);width:100%;padding:13px;font-size:14px;font-weight:500;border-radius:var(--r);border:1px solid rgba(26,77,110,.25);background:var(--accent-light);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7A5 5 0 112 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 3v4h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -4651,6 +4664,101 @@ function exportCSV(){
   a.download=APP_NAME+'_Register.csv';a.click();
   showToast('CSV exported.');
 }
+
+let _csvImportPending=[];
+
+function _parseCSVLine(line){
+  const out=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(c===','&&!inQ){out.push(cur);cur='';}
+    else cur+=c;
+  }
+  out.push(cur);
+  return out;
+}
+
+function importCSVSelected(input){
+  const file=input.files[0];
+  if(!file) return;
+  input.value='';
+  const preview=document.getElementById('csv-import-preview');
+  const confirmBtn=document.getElementById('csv-import-confirm-btn');
+  preview.style.display='none';
+  confirmBtn.style.display='none';
+  _csvImportPending=[];
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=(e.target.result||'').split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length<2){showToast('CSV has no data rows.');return;}
+    const rows=lines.slice(1).map(l=>_parseCSVLine(l));
+    const clientId=getActiveClientId();
+    const existingSerials=new Set(
+      devices.filter(d=>!d.clientId||d.clientId===clientId).map(d=>(d.serial||'').trim().toLowerCase())
+    );
+    const toAdd=[],dupes=[];
+    rows.forEach(r=>{
+      if(r.length<9) return;
+      const serial=(r[8]||'').trim();
+      if(!serial) return;
+      if(existingSerials.has(serial.toLowerCase())){dupes.push(serial);return;}
+      const lat=parseFloat(r[3]),lng=parseFloat(r[4]);
+      const testResult=(r[13]||'').trim()||'Pending';
+      const testDate=(r[12]||'').trim();
+      const tester=(r[14]||'').trim();
+      const notes=(r[15]||'').trim();
+      const dev={
+        id:0,clientId,
+        suburb:(r[0]||'').trim().toUpperCase(),
+        complex:(r[1]||'').trim(),
+        address:(r[2]||'').trim(),
+        lat:isNaN(lat)?null:lat,
+        lng:isNaN(lng)?null:lng,
+        make:(r[5]||'').trim(),
+        model:(r[6]||'').trim(),
+        size:(r[7]||'').trim(),
+        serial,
+        backflowId:(r[9]||'').trim(),
+        location:(r[10]||'').trim(),
+        scheduledMonth:(r[11]||'').trim(),
+        testDate,
+        testResult,
+        notes,
+      };
+      if(testDate&&tester&&testResult&&testResult!=='Pending'){
+        dev.testLog=[{date:testDate,result:testResult,tester,notes,ts:Date.now()}];
+      }
+      toAdd.push(dev);
+    });
+    _csvImportPending=toAdd;
+    if(toAdd.length===0){
+      preview.style.display='block';
+      preview.innerHTML=`<strong>Nothing to import.</strong> All ${dupes.length} device(s) already exist (matched by serial number).`;
+      return;
+    }
+    preview.style.display='block';
+    preview.innerHTML=`<strong>${toAdd.length} new device(s) ready to import.</strong>`
+      +(dupes.length?`<br><span style="color:var(--text3);font-size:12px">${dupes.length} skipped — serial already exists: ${dupes.slice(0,5).join(', ')}${dupes.length>5?' …':''}</span>`:'')
+      +`<br><br>`+toAdd.map(d=>`• <strong>${d.suburb}</strong> — ${d.make||'?'} ${d.model} / <span style="font-family:var(--mono)">${d.serial}</span>`).join('<br>');
+    confirmBtn.style.display='block';
+  };
+  reader.readAsText(file);
+}
+
+function importCSVConfirm(){
+  if(!_csvImportPending.length) return;
+  _csvImportPending.forEach((d,i)=>{d.id=Date.now()+i;devices.push(d);});
+  const count=_csvImportPending.length;
+  _csvImportPending=[];
+  save();populateSuburbFilter();populateYearFilter();render();
+  document.getElementById('csv-import-preview').style.display='none';
+  document.getElementById('csv-import-confirm-btn').style.display='none';
+  showToast(`${count} device(s) imported successfully.`);
+  closeUserMgmt();
+}
+
+
 
 function showToast(msg, duration=2500){
   const t=document.getElementById('toast');

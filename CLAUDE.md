@@ -180,6 +180,15 @@ Served at neil293.github.io/FieldPass/tools/bffill.js (live path, not beta — t
 - **Tradehack test page** (`/clients/retest/<device-uuid>`, `form.form9_qld`, jQuery): device_type radio, mains_pressure_kpa/time/date, device_check_valve_1/2, device_differential_pressure (RPZD), upstream/downstream `tight`, strainer_fitted yes (if unset), strainer_cleaned yes, `test_kits` option by serial in its text, appendix E (RPZD) / F (DCV), test_result, test_remarks. Confirms if `device_serial_number` differs.
 Never presses Submit / Complete Test. Saved copies of all pages were used for testing (not in repo).
 
+## Android app (`android/`)
+
+Small native wrapper (plain Java, no AndroidX), package `au.com.fairymeadowplumbing.fieldpass`, minSdk 29. Built by `.github/workflows/android.yml` on pushes touching `android/**` (or manually); signed with `android/fieldpass.jks` (committed so every build installs over the last and keeps app data — password in `app/build.gradle`); published to release **android-latest** as `FieldPass.apk` (https://github.com/Neil293/FieldPass/releases/download/android-latest/FieldPass.apk). versionCode = run number.
+- Loads `https://neil293.github.io/FieldPass/app/` — `app/index.html` redirects to the version the app should run (`../beta/` now; change to `../` when beta goes live — no new APK needed). The app's WebView has its **own storage**, separate from Chrome: data gets in by Settings → Data → restore a backup (or Firebase sync once live).
+- Links from FieldPass to other sites open in an **in-app browser** (second WebView with a top bar: ‹ FieldPass, title, ⚡ BF Fill, ↻, ⇱ open in Chrome). Google Maps, mailto, tel go to other apps. Cookies persist, so BackFlowID/Tradehack logins are kept.
+- On every page load on backflowid.com / qr2id.net / qr2id.com / tradehack.com.au it injects the BF Fill loader (sets `window.__BFFILL_APP`).
+- JS bridge `window.FieldPassApp`: `setPacket(text)` (FieldPass screen only) / `getPacket()`, `saveFile(name, mime, base64)` (FieldPass downloads → Downloads/FieldPass, via an injected shim for blob links), `openInApp(url)`, `isApp()`, `version()`. FieldPass's `copyHandoff` and `openBackflowLink` use it when present; BF Fill prefers the bridge packet and re-detects the page every second (BackFlowID changes screens without reloading).
+- Handles camera (getUserMedia + photo upload with camera option), GPS prompts, file chooser, window.open, back button.
+
 ## Switching beta to live (checklist)
 
 Only when Neil asks ("switch FieldPass to the beta version"). Work on `main`, run `git fetch` first, and confirm each step before the next.

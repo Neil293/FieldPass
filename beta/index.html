@@ -4144,13 +4144,13 @@ function renderReadingsSheet(){
         <div style="font-size:11px;color:var(--text3)">${has?'Last: '+pv:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <button type="button" class="rd-step" data-k="${f.k}" data-d="${-f.step}" aria-label="Decrease ${f.label}" style="width:56px;height:52px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font:500 26px var(--sans);color:var(--text);touch-action:manipulation">−</button>
+        <button type="button" tabindex="-1" class="rd-step" data-k="${f.k}" data-d="${-f.step}" aria-label="Decrease ${f.label}" style="width:56px;height:52px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font:500 26px var(--sans);color:var(--text);touch-action:manipulation">−</button>
         <div style="flex:1;position:relative">
-          <input id="rd-${f.k}" data-k="${f.k}" class="rd-in${has?' rd-prefill':''}" type="text" inputmode="decimal" autocomplete="off" value="${has?pv:''}" placeholder="—"
+          <input id="rd-${f.k}" data-k="${f.k}" class="rd-in${has?' rd-prefill':''}" type="text" inputmode="decimal" autocomplete="off" readonly value="${has?pv:''}" placeholder="—"
             style="width:100%;height:52px;text-align:center;font:600 22px var(--mono);border-radius:12px;border:1px solid var(--border);padding:0 40px 0 10px">
           <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none">kPa</span>
         </div>
-        <button type="button" class="rd-step" data-k="${f.k}" data-d="${f.step}" aria-label="Increase ${f.label}" style="width:56px;height:52px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font:500 26px var(--sans);color:var(--text);touch-action:manipulation">+</button>
+        <button type="button" tabindex="-1" class="rd-step" data-k="${f.k}" data-d="${f.step}" aria-label="Increase ${f.label}" style="width:56px;height:52px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font:500 26px var(--sans);color:var(--text);touch-action:manipulation">+</button>
       </div>
     </div>`;}).join('');
 
@@ -4182,22 +4182,31 @@ function renderReadingsSheet(){
 
 function rdWire(sheet){
   // Typing in a field confirms it
+  const edit=inp=>{inp.readOnly=false;inp.focus();try{inp.select();}catch(e){}};
   sheet.querySelectorAll('.rd-in').forEach(inp=>{
+    // Keyboard only when the number itself is tapped
+    inp.addEventListener('click',()=>{if(inp.readOnly) edit(inp);});
+    inp.addEventListener('blur',()=>{inp.readOnly=true;});
     inp.addEventListener('input',()=>inp.classList.remove('rd-prefill'));
     inp.addEventListener('keydown',e=>{
       if(e.key!=='Enter') return;
       e.preventDefault();
       const all=[...sheet.querySelectorAll('.rd-in')];
       const nx=all[all.indexOf(inp)+1];
-      nx?nx.focus():inp.blur();
+      nx?edit(nx):inp.blur();
     });
   });
   // +/- with press-and-hold repeat
   sheet.querySelectorAll('.rd-step').forEach(btn=>{
     let t1=null,t2=null;
     const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+    // Stop the tap from moving focus (and the keyboard) anywhere
+    btn.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+    btn.addEventListener('mousedown',e=>e.preventDefault());
     btn.addEventListener('pointerdown',e=>{
       e.preventDefault();
+      const a=document.activeElement;
+      if(a&&a.classList&&a.classList.contains('rd-in')) a.blur();
       rdBump(btn.dataset.k,parseFloat(btn.dataset.d));
       t1=setTimeout(()=>{t2=setInterval(()=>rdBump(btn.dataset.k,parseFloat(btn.dataset.d)),90);},450);
     });

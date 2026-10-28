@@ -4095,11 +4095,11 @@ function getKits(){const k=getSetting('testKits',[]);return Array.isArray(k)?k:[
 function saveKits(k){saveSetting('testKits',k);}
 function kitLabel(k){return k?[k.make,k.serial?'S/N '+k.serial:''].filter(Boolean).join(' · '):'';}
 function kitDueStatus(k){
-  // 'overdue' | 'soon' (within 30 days) | 'ok' | '' (no due date)
+  // 'overdue' | 'soon' (within 4 weeks) | 'ok' | '' (no due date)
   if(!k||!k.dueDate) return '';
   const due=new Date(k.dueDate+'T23:59:59'), now=new Date();
   if(due<now) return 'overdue';
-  if((due-now)/86400000<=30) return 'soon';
+  if((due-now)/86400000<=28) return 'soon';   // 4 weeks
   return 'ok';
 }
 function kitDueText(k){
@@ -4357,7 +4357,7 @@ function renderReadingsSheet(){
     </div>`;}).join('');
 
   const nPrefill=READING_FIELDS[type].filter(f=>(prev&&prev.readings[f.k]!=null&&prev.readings[f.k]!=='')||readingDefault(type,f)!=='').length;
-  sheet.innerHTML=head+`
+  sheet.innerHTML=head+`<div id="rd-kit-warn">${getKits().length?kitWarnHtml(getKits().find(k=>k.id===getUserKitId())):''}</div>
     <style>
       .rd-in.rd-prefill{background:#fff3b0;border-color:#e0b400}
       .rd-step:active{background:var(--border)!important}
@@ -4448,7 +4448,16 @@ function rdSetType(t){
   renderReadingsSheet();
 }
 
+// Banner at the top of the readings sheet for the selected kit
+function kitWarnHtml(k){
+  const s=kitDueStatus(k);
+  if(s==='overdue') return `<div style="margin:10px 1.25rem 0;padding:10px 12px;border-radius:10px;background:var(--red-bg);border:1px solid var(--red);color:var(--red);font-size:13px;font-weight:600">⚠ Test kit overdue — ${kEsc(kitLabel(k))} was due for calibration on ${fmtDate(k.dueDate)}</div>`;
+  if(s==='soon') return `<div style="margin:10px 1.25rem 0;padding:10px 12px;border-radius:10px;background:var(--amber-bg);border:1px solid var(--amber);color:var(--amber);font-size:13px;font-weight:600">Test kit requires testing before ${fmtDate(k.dueDate)} — ${kEsc(kitLabel(k))}</div>`;
+  return '';
+}
 function rdKitChanged(id){
+  const w=document.getElementById('rd-kit-warn');
+  if(w) w.innerHTML=kitWarnHtml(getKits().find(k=>k.id===id));
   setUserKitId(id);   // remember as this user's current kit
   const el=document.getElementById('rd-kit-due');
   if(el) el.innerHTML=kitDueText(getKits().find(k=>k.id===id));

@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+def buildNo = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+
+android {
+    namespace 'au.com.fairymeadowplumbing.fieldpass'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'au.com.fairymeadowplumbing.fieldpass'
+        minSdk 29
+        targetSdk 34
+        versionCode buildNo
+        versionName "1.0.${buildNo}"
+    }
+
+    // Fixed key so each new build installs over the last one (keeps the app's data and logins).
+    signingConfigs {
+        release {
+            storeFile file('../fieldpass.jks')
+            storePassword 'fpapp-2026-signing'
+            keyAlias 'fieldpass'
+            keyPassword 'fpapp-2026-signing'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

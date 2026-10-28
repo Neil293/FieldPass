@@ -4074,6 +4074,7 @@ function updateBfidGoBtn(){
 // full Chrome (an installed app otherwise opens it in its built-in viewer, where bookmarks such as
 // BF Fill can't run). Falls back to the normal link if Chrome isn't available.
 function openBackflowLink(url){
+  if(window.FieldPassApp){window.open(url,'_blank');return;}   // Android app opens it in its in-app browser
   const android=/Android/i.test(navigator.userAgent);
   if(android&&getSetting('bfidInChrome',true)&&/^https?:\/\//i.test(url)){
     const clean=url.split('#')[0];
@@ -4527,6 +4528,10 @@ function handoffPacket(d,entry){
 }
 function copyHandoff(d,entry,quiet){
   const text='FPBF1 '+JSON.stringify(handoffPacket(d,entry));
+  // In the FieldPass Android app the test goes straight to the in-app browser — no clipboard
+  if(window.FieldPassApp&&window.FieldPassApp.setPacket){
+    try{window.FieldPassApp.setPacket(text);showToast(quiet?'Saved · test ready for BackFlowID':'Test ready for BackFlowID / Tradehack');return;}catch(e){}
+  }
   if(!navigator.clipboard||!navigator.clipboard.writeText){if(!quiet)showToast('Clipboard not available');return;}
   navigator.clipboard.writeText(text).then(()=>showToast(quiet?'Saved · test copied for BackFlowID':'Test copied for BackFlowID / Tradehack'),()=>{if(!quiet)showToast('Could not copy — tap again');});
 }
@@ -4805,6 +4810,10 @@ function loadSettingsCheckboxes(){
   {const th=document.getElementById('setting-tradehack-enabled'); if(th) th.checked=tradehackEnabled();}
   {const hc=document.getElementById('setting-handoff-copy'); if(hc) hc.checked=getSetting('handoffCopy',true);}
   {const bc=document.getElementById('setting-bfid-in-chrome'); if(bc) bc.checked=getSetting('bfidInChrome',true);}
+  if(window.FieldPassApp){
+    // Not needed inside the Android app: links open in its own browser and BF Fill runs automatically
+    ['setting-bfid-in-chrome','setting-handoff-copy'].forEach(id=>{const el=document.getElementById(id);const l=el&&el.closest('label');if(l)l.style.display='none';});
+  }
   const el4=document.getElementById('setting-auto-update-gps');
   if(el4) el4.checked=getSetting('autoUpdateGps',false);
   const el5=document.getElementById('setting-copy-serial');

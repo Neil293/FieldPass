@@ -39,6 +39,9 @@ function stored(){
 }
 function store(p){try{localStorage.setItem(KEY,JSON.stringify({p:p,at:Date.now()}));}catch(e){}}
 function packetText(p){return 'FPBF1 '+JSON.stringify(p);}
+var IN_APP=!!(window.FieldPassApp&&window.FieldPassApp.getPacket);
+function appPacket(){try{return IN_APP?parsePacket(window.FieldPassApp.getPacket()):null;}catch(e){return null;}}
+function newest(a,b){if(!a) return b;if(!b) return a;return (a.ts||0)>=(b.ts||0)?a:b;}
 
 var filled=0, missed=[];
 function mark(el){
@@ -283,7 +286,7 @@ root.innerHTML='<style>'+
 '</div></div>';
 var $=function(id){return root.getElementById(id);};
 
-var packet=stored();
+var packet=newest(appPacket(),stored());
 function showPacket(){
   var p=packet;
   if(!p){$('pk').innerHTML='No test loaded. Save the test in FieldPass, then tap <b>Load test</b>.';return;}
@@ -294,6 +297,12 @@ function showPacket(){
 function say(text,kind){var m=$('msg');m.className='msg '+(kind||'inf');m.textContent=text;m.style.display=text?'block':'none';}
 
 function loadClipboard(cb){
+  if(IN_APP){
+    var ap=appPacket();
+    if(ap){packet=ap;store(ap);showPacket();say('Loaded test for S/N '+ap.serial,'ok');if(cb) cb();}
+    else say('No test from FieldPass yet. Save the readings in FieldPass first.','bad');
+    return;
+  }
   if(!navigator.clipboard||!navigator.clipboard.readText){showPaste();return;}
   navigator.clipboard.readText().then(function(t){
     var p=parsePacket(t);
@@ -322,6 +331,8 @@ $('mp').onclick=function(){
 };
 
 function withPacket(fn){
+  var ap=appPacket();
+  if(ap&&(!packet||(ap.ts||0)>(packet.ts||0))){packet=ap;store(ap);showPacket();}
   if(packet) return fn(packet);
   loadClipboard(function(){fn(packet);});
 }
@@ -338,10 +349,15 @@ function checkSerial(p){
 }
 
 /* ── per-page action ────────────────────────────────── */
-var page=detect();
+var page=null;
 var titles={bf_test:'BackFlowID test',bf_tag:'BackFlowID tag',bf_result:'BackFlowID result',bf_other:'BackFlowID',th_test:'Tradehack test',th_list:'Tradehack',th_other:'Tradehack',other:'BF Fill'};
-$('t').textContent='BF Fill · '+(titles[page]||'');
 var go=$('go');
+function setupPage(){
+page=detect();
+filled=0;missed=[];say('');
+go.className='x p';
+$('t').textContent='BF Fill · '+(titles[page]||'');
+if(IN_APP&&/other$/.test(page)) $('w').classList.add('min'); else $('w').classList.remove('min');
 
 function scrollToEl(el){if(el&&el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'smooth'});}
 
@@ -392,6 +408,10 @@ if(page==='bf_test'){
   go.textContent='⚡ Fill';
   go.onclick=function(){say(page==='th_other'?'Open the device\'s backflow Test page, then run BF Fill again.':page==='bf_other'?'Open the device, tap Test Device (or Tag), then run BF Fill again.':'This isn\'t a BackFlowID or Tradehack page.','inf');};
 }
+}
+setupPage();
+// BackFlowID changes screens without a full page load — follow along
+setInterval(function(){try{if(detect()!==page) setupPage();}catch(e){}},1000);
 
 showPacket();
 window.__bffill={show:function(){host.style.display='';$('w').classList.remove('min');},version:VER};

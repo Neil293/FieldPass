@@ -4075,6 +4075,22 @@ function markTestedToday(result){
 // ── Test kits (Settings → Kits) ─────────────────────────
 // Stored in settings.testKits so they sync with the rest of the settings.
 // Each user's current kit is user.kitId.
+// Fairy Meadow Plumbing's kits (from Tradehack + calibration stickers). Added once;
+// skipped if a kit with the same serial already exists, and never re-added after deletion.
+const SEED_KITS=[
+  {id:'kit_c2836',make:'MM- Dura',serial:'C-2836',calDate:'2026-04-23',dueDate:'2027-04-23',range:'0-100 kPa',reportNo:'1043',calibratedBy:'Triple i (BP)'},
+  {id:'kit_c3925',make:'NA - Dura',serial:'C-3925',calDate:'2026-05-15',dueDate:'2027-05-15',range:'0-100 kPa',reportNo:'S000145',calibratedBy:'Triple i (L.C)'},
+];
+function seedKitsOnce(){
+  try{
+    if(getSetting('testKitsSeeded',false)) return;
+    const kits=getKits();
+    const have=new Set(kits.map(k=>(k.serial||'').toUpperCase()));
+    SEED_KITS.forEach(k=>{if(!have.has(k.serial.toUpperCase())) kits.push({...k});});
+    saveKits(kits); saveSetting('testKitsSeeded',true);
+  }catch(e){console.warn('Kit seed failed',e);}
+}
+document.addEventListener('DOMContentLoaded',seedKitsOnce);
 function getKits(){const k=getSetting('testKits',[]);return Array.isArray(k)?k:[];}
 function saveKits(k){saveSetting('testKits',k);}
 function kitLabel(k){return k?[k.make,k.serial?'S/N '+k.serial:''].filter(Boolean).join(' · '):'';}

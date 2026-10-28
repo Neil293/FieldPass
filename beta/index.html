@@ -2158,10 +2158,11 @@ function getStatusForYear(d, year){
   if(year===currentYear){
     // A failed device stays Failed until a new result is recorded
     if(d.testDate&&d.testResult==='Fail') return'failed';
-    // Overdue at the end of last year (no test last year) stays Overdue until tested
+    // Overdue at the end of last year (has test records, but none last year) stays Overdue until tested.
+    // Devices with no test records at all are left on the normal cycle (records were lost in 2026).
     if(d.scheduledMonth&&year-1>=STATUS_CARRY_FROM_YEAR){
-      const lastY=d.testDate?parseInt(d.testDate.slice(0,4)):0;
-      if(lastY<year-1) return'overdue';
+      const yrs=[d.testDate,...((d.testLog||[]).map(l=>l&&l.date))].filter(Boolean).map(s=>parseInt(String(s).slice(0,4))).filter(n=>!isNaN(n));
+      if(yrs.length&&Math.max(...yrs)<year-1) return'overdue';
     }
   }
   if(!d.scheduledMonth) return'pending';

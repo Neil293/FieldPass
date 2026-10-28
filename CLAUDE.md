@@ -167,3 +167,25 @@ Beta features not yet in live:
 - **Test kits** — Settings → "🧪 Test kits" tab. Kits stored in settings as `testKits: [{id, make, serial, calDate, dueDate, range, reportNo, calibratedBy}]` (so they sync with settings). Each user's current kit is `user.kitId` (Users → Edit → Current test kit, or chosen on the readings sheet, which updates it). Readings store `kit` (label) plus a `kitInfo` snapshot. Readings sheet shows a banner: amber "Test kit requires testing before …" from 4 weeks before due, red "Test kit overdue" after; overdue also asks before saving.
 - **Directions QR toggle** — Settings → Device list → "Show 'Scan for directions' QR code" (`showDirectionsQr`, default on). When off, `openDevice` hides `#m-qr-block` and skips `generateQR`.
 - **Status carry-over at new year** — in `getStatusForYear`, for the current year only: a device whose latest result is Fail stays `failed` until a new result is recorded; a scheduled device that has test records but none in the previous year stays `overdue` (devices with no records at all stay on the normal cycle — Neil lost records in 2026) (applies from 2027, `STATUS_CARRY_FROM_YEAR = 2026`). A Pass/Repaired from last year still resets to the normal due cycle on 1 January.
+
+## Switching beta to live (checklist)
+
+Only when Neil asks ("switch FieldPass to the beta version"). Work on `main`, run `git fetch` first, and confirm each step before the next.
+
+1. **Neil backs up first.** Ask him to download a backup from live FieldPass → Settings → Data before anything changes. Don't continue until he confirms.
+2. **Tag the current live version** so it can be restored in one step:
+   `git tag live-before-beta-YYYYMMDD && git push origin live-before-beta-YYYYMMDD`
+3. **Keep the old version online at `previous/`** (copy root `index.html`, `data.js`, `manifest.json`, icons, `sw.js`). It shares data with live, which is fine — it only ignores the new fields. In `previous/`: title "FieldPass (previous)", manifest name/short_name "FieldPass (previous)", and change `previous/sw.js` so its cache names start `fieldpass-previous-` and its activate step only deletes caches with that prefix (otherwise it wipes the live app's cache).
+4. **Build the new live `index.html` from `beta/index.html`**, removing every `BETA-ONLY` block:
+   - the storage shim `<script>` at the top of `<head>` (live must use the plain keys);
+   - the Firebase stub — put back the original `<!-- Firebase SDK -->` module block from the old root `index.html`, unchanged;
+   - the orange stripe, BETA badge, `fpBetaMenu` and the `setSyncStatus` override at the end of `<body>`;
+   - `<title>` back to `FieldPass`, `theme-color` back to `#1a4d6e`.
+   Keep everything else (device type, readings, test kits, `SEED_KITS`, status carry-over, settings).
+   Check: `grep -n "BETA-ONLY\|fpbeta\|FP_BETA\|fp-beta" index.html` returns nothing.
+5. **Root `sw.js`**: bump `CACHE_NAME` by one from its current value, and limit the activate clean-up to caches starting `fieldpass-v` plus `complytrack-tiles-v1`, so it no longer deletes the `beta/` and `previous/` caches. Root `manifest.json` stays as it is.
+6. **Test before pushing** (headless Chromium, phone size, serving the repo under `/FieldPass/`): log in, device counts by status match the old live version, Pass → readings sheet → save works, Test kits tab shows the two Dura kits, sync label is not "beta", no page errors.
+7. **Push, wait for the Pages deploy** (`gh run list -R Neil293/FieldPass -L 1`), then tell Neil to fully close and reopen FieldPass. Remind him: tests he recorded in the beta stay in the beta and do not move to live.
+8. **Afterwards:** update the "Beta features not yet in live" list above (they're now live), update the Device model / CSV sections, and reset the beta for future work with `python3 tools/make_beta.py .` (Neil then taps BETA → copy live data).
+
+**To revert:** `git checkout live-before-beta-YYYYMMDD -- index.html sw.js manifest.json data.js`, bump `CACHE_NAME` above the newest value used, commit, push, wait for deploy. Neil's data keeps working in the old version (new fields are ignored). Meanwhile he can use `/FieldPass/previous/`.

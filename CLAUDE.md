@@ -159,3 +159,6 @@ Beta-only differences (all marked `BETA-ONLY` in `beta/index.html`) — remove t
 2. Firebase SDK replaced by a stub — sync is off so the beta can never write `ct_sync/main`.
 3. Orange stripe, BETA badge (tap → re-copy live data), "Sync off (beta)" label.
 4. `beta/sw.js` uses cache names starting `fieldpass-beta-` and only deletes its own caches; `beta/manifest.json` is "FieldPass Beta" with an orange theme.
+
+Beta features not yet in live:
+- **Device type** — `type: 'RPZD' | 'DCV' | ''` on each device. Set once on load from make/model by `guessDeviceType()` ('' when unsure), editable in Device details and Add Device, shown in the info grid, exported/imported as the last CSV column "Device Type".

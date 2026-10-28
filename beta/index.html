@@ -1115,6 +1115,13 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           </div>
         </label>
         <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-tradehack-enabled" onchange="saveSetting('tradehackEnabled',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Send results to Tradehack</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Include Tradehack in the hand-off after BackFlowID. Turn off once you stop recording backflow tests in Tradehack</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
           <input type="checkbox" id="setting-auto-update-gps" onchange="saveSetting('autoUpdateGps',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:500;color:var(--text)">Update saved location after recording asset history</div>
@@ -4065,6 +4072,8 @@ const READING_FIELDS={
   ],
 };
 const LAST_KIT_KEY='fp_last_test_kit_v1';
+// On by default; the hand-off to Tradehack checks this
+function tradehackEnabled(){return getSetting('tradehackEnabled',true);}
 let _pendingReadings=null;   // attached to the test log entry by saveTest()
 let _rdCtx=null;             // {result, next, type, prev}
 
@@ -4457,6 +4466,7 @@ function loadSettingsCheckboxes(){
   if(el2) el2.checked=getSetting('showDecommissioned',true);
   const el3=document.getElementById('setting-follow-backflow-url');
   if(el3) el3.checked=getSetting('followBackflowUrl',false);
+  {const th=document.getElementById('setting-tradehack-enabled'); if(th) th.checked=tradehackEnabled();}
   const el4=document.getElementById('setting-auto-update-gps');
   if(el4) el4.checked=getSetting('autoUpdateGps',false);
   const el5=document.getElementById('setting-copy-serial');

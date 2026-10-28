@@ -4063,12 +4063,12 @@ const READING_FIELDS={
     {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:1},
     {k:'rv',   label:'Relief valve',      hint:'opened at',      step:1},
     {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:1},
-    {k:'line', label:'Line pressure',     hint:'supply',         step:10},
+    {k:'line', label:'Main pressure',     hint:'',               step:50},
   ],
   DCV:[
     {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:1},
     {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:1},
-    {k:'line', label:'Line pressure',     hint:'supply',         step:10},
+    {k:'line', label:'Main pressure',     hint:'',               step:50},
   ],
 };
 const LAST_KIT_KEY='fp_last_test_kit_v1';
@@ -4284,7 +4284,7 @@ function _closeReadings(cb){
 
 function fmtReadings(r){
   if(!r) return '';
-  const lab={cv1:'CV1',rv:'RV',cv2:'CV2',line:'Line'};
+  const lab={cv1:'CV1',rv:'RV',cv2:'CV2',line:'Main'};
   const parts=(READING_FIELDS[r.type]||[]).filter(f=>r[f.k]!=null).map(f=>lab[f.k]+' '+r[f.k]);
   return parts.length?parts.join(' · ')+' kPa':'';
 }

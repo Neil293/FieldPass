@@ -1132,6 +1132,13 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           </div>
         </label>
         <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-bfid-in-chrome" onchange="saveSetting('bfidInChrome',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Open Backflow ID in Chrome</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Opens Backflow ID links in full Chrome instead of FieldPass's built-in viewer, so the BF Fill bookmark can run (Android)</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
           <input type="checkbox" id="setting-handoff-copy" onchange="saveSetting('handoffCopy',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
           <div style="flex:1">
             <div style="font-size:14px;font-weight:500;color:var(--text)">Copy test for BackFlowID / Tradehack</div>
@@ -4063,12 +4070,26 @@ function updateBfidGoBtn(){
   }
 }
 
+// Open a Backflow ID link. On Android with "Open Backflow ID in Chrome" on, hand the link to
+// full Chrome (an installed app otherwise opens it in its built-in viewer, where bookmarks such as
+// BF Fill can't run). Falls back to the normal link if Chrome isn't available.
+function openBackflowLink(url){
+  const android=/Android/i.test(navigator.userAgent);
+  if(android&&getSetting('bfidInChrome',true)&&/^https?:\/\//i.test(url)){
+    const clean=url.split('#')[0];
+    const scheme=clean.toLowerCase().startsWith('http:')?'http':'https';
+    const intent='intent://'+clean.replace(/^https?:\/\//i,'')+'#Intent;scheme='+scheme+';package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(clean)+';end';
+    location.href=intent;
+    return;
+  }
+  window.open(url,'_blank');
+}
 function openBfidUrl(){
   const val=document.getElementById('e-backflowid').value.trim();
   if(!val) return;
   // If it looks like a URL, open it; otherwise search for it
   const url=val.startsWith('http')?val:'https://www.google.com/search?q='+encodeURIComponent(val);
-  window.open(url,'_blank');
+  openBackflowLink(url);
 }
 
 function markDecommissioned(){
@@ -4749,7 +4770,7 @@ function saveTest(){
   const isTestAction=['Pass','Fail','Repaired','Decommissioned'].includes(testResult);
   if(bfId&&isTestAction&&getSetting('followBackflowUrl',false)){
     const url=bfId.startsWith('http')?bfId:'https://www.google.com/search?q='+encodeURIComponent(bfId);
-    setTimeout(()=>window.open(url,'_blank'),400);
+    setTimeout(()=>openBackflowLink(url),400);
   }
 }
 
@@ -4783,6 +4804,7 @@ function loadSettingsCheckboxes(){
   if(el3) el3.checked=getSetting('followBackflowUrl',false);
   {const th=document.getElementById('setting-tradehack-enabled'); if(th) th.checked=tradehackEnabled();}
   {const hc=document.getElementById('setting-handoff-copy'); if(hc) hc.checked=getSetting('handoffCopy',true);}
+  {const bc=document.getElementById('setting-bfid-in-chrome'); if(bc) bc.checked=getSetting('bfidInChrome',true);}
   const el4=document.getElementById('setting-auto-update-gps');
   if(el4) el4.checked=getSetting('autoUpdateGps',false);
   const el5=document.getElementById('setting-copy-serial');

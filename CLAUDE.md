@@ -149,3 +149,13 @@ Permissions are stored as a flat object of flags per user (not purely role-based
 ### Email Templates
 
 Use `{{placeholder}}` syntax for dynamic values in suburb compliance report emails. Templates are stored in localStorage and rendered with simple string replacement.
+
+## Beta copy (`beta/`)
+
+`beta/` is a test copy of the app at neil293.github.io/FieldPass/beta/, used to build new features without touching the live app. New feature work goes in `beta/index.html` until Neil approves it; the live root files are not changed meanwhile.
+
+Beta-only differences (all marked `BETA-ONLY` in `beta/index.html`) — remove these when promoting beta to live:
+1. Storage shim at the top of `<head>`: every localStorage key is prefixed `fpbeta:`, and on first open the live `fp_ / bf_ / scc_ / ct_` keys are copied in. The live app and beta share the neil293.github.io origin, so without this they would share data.
+2. Firebase SDK replaced by a stub — sync is off so the beta can never write `ct_sync/main`.
+3. Orange stripe, BETA badge (tap → re-copy live data), "Sync off (beta)" label.
+4. `beta/sw.js` uses cache names starting `fieldpass-beta-` and only deletes its own caches; `beta/manifest.json` is "FieldPass Beta" with an orange theme.

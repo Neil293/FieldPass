@@ -4060,14 +4060,14 @@ function markTestedToday(result){
 // Fields are provisional until the BackFlowID and Tradehack forms are mapped.
 const READING_FIELDS={
   RPZD:[
-    {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:1},
-    {k:'rv',   label:'Relief valve',      hint:'opened at',      step:1},
-    {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:1},
+    {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:2, def:50},
+    {k:'rv',   label:'Relief valve',      hint:'opened at',      step:2, def:20},
+    {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:2, def:20},
     {k:'line', label:'Main pressure',     hint:'',               step:50},
   ],
   DCV:[
-    {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:1},
-    {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:1},
+    {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:2, def:20},
+    {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:2, def:20},
     {k:'line', label:'Main pressure',     hint:'',               step:50},
   ],
 };
@@ -4135,13 +4135,15 @@ function renderReadingsSheet(){
   _rdCtx.prev=prev;
   let kit='';try{kit=localStorage.getItem(LAST_KIT_KEY)||'';}catch(e){}
   const rows=READING_FIELDS[type].map(f=>{
-    const pv=prev&&prev.readings[f.k];
-    const has=pv!==undefined&&pv!==null&&pv!=='';
+    const lastV=prev&&prev.readings[f.k];
+    const hasLast=lastV!==undefined&&lastV!==null&&lastV!=='';
+    const pv=hasLast?lastV:(f.def!==undefined?f.def:'');
+    const has=pv!=='';
     return `
     <div style="padding:10px 0;border-bottom:1px solid var(--border2)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
         <div style="font-size:14px;font-weight:600;color:var(--text)">${f.label} <span style="font-weight:400;color:var(--text3);font-size:12px">${f.hint}</span></div>
-        <div style="font-size:11px;color:var(--text3)">${has?'Last: '+pv:''}</div>
+        <div style="font-size:11px;color:var(--text3)">${hasLast?'Last: '+lastV:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <button type="button" tabindex="-1" class="rd-step" data-k="${f.k}" data-d="${-f.step}" aria-label="Decrease ${f.label}" style="width:56px;height:52px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font:500 26px var(--sans);color:var(--text);touch-action:manipulation">−</button>
@@ -4154,7 +4156,7 @@ function renderReadingsSheet(){
       </div>
     </div>`;}).join('');
 
-  const nPrefill=prev?READING_FIELDS[type].filter(f=>prev.readings[f.k]!=null&&prev.readings[f.k]!=='').length:0;
+  const nPrefill=READING_FIELDS[type].filter(f=>(prev&&prev.readings[f.k]!=null&&prev.readings[f.k]!=='')||f.def!==undefined).length;
   sheet.innerHTML=head+`
     <style>
       .rd-in.rd-prefill{background:#fff3b0;border-color:#e0b400}
@@ -4166,7 +4168,10 @@ function renderReadingsSheet(){
             <span>Yellow = copied from ${fmtDate(prev.date)}. Adjust or confirm.</span>
             ${nPrefill?`<button type="button" onclick="rdConfirmAll()" style="flex-shrink:0;padding:8px 10px;font:600 12px var(--sans);border-radius:8px;border:1px solid #e0b400;background:#fff;color:#6b5500">Same as last</button>`:''}
           </div>`
-        :`<div style="padding:10px 0 2px;font-size:12px;color:var(--text3)">No earlier readings for this device — enter today's.</div>`}
+        :`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin:10px 0 4px;border-radius:10px;background:#fff8d6;font-size:12px;color:#6b5500">
+            <span>No earlier readings. Yellow = starting values — adjust to today's.</span>
+            <button type="button" onclick="rdConfirmAll()" style="flex-shrink:0;padding:8px 10px;font:600 12px var(--sans);border-radius:8px;border:1px solid #e0b400;background:#fff;color:#6b5500">Use these</button>
+          </div>`}
       ${rows}
       <div style="padding:12px 0 4px">
         <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">Test kit</label>
@@ -4218,7 +4223,10 @@ function rdWire(sheet){
 function rdBump(k,delta){
   const inp=document.getElementById('rd-'+k); if(!inp) return;
   const cur=parseFloat(inp.value);
-  let v=(isNaN(cur)?0:cur)+delta;
+  const st=Math.abs(delta);
+  let v=isNaN(cur)?(delta>0?st:0)
+    :delta>0?Math.floor(cur/st+1e-9)*st+st
+    :Math.ceil(cur/st-1e-9)*st-st;
   if(v<0) v=0;
   inp.value=String(Math.round(v*10)/10);
   inp.classList.remove('rd-prefill');
@@ -4252,7 +4260,7 @@ function _rdCollect(){
 function rdSave(){
   if(!_rdCtx||!_rdCtx.type) return;
   const unconfirmed=document.querySelectorAll('#rd-sheet .rd-in.rd-prefill').length;
-  if(unconfirmed&&!confirm(unconfirmed+' reading'+(unconfirmed>1?'s are':' is')+' still last test\'s value (yellow).\n\nUse '+(unconfirmed>1?'them':'it')+' as today\'s reading'+(unconfirmed>1?'s':'')+'?')) return;
+  if(unconfirmed&&!confirm(unconfirmed+' reading'+(unconfirmed>1?'s are':' is')+' still pre-filled (yellow), not changed today.\n\nUse '+(unconfirmed>1?'them':'it')+' as today\'s reading'+(unconfirmed>1?'s':'')+'?')) return;
   _pendingReadings=_rdCollect();
   const next=_rdCtx.next;
   _closeReadings(next);

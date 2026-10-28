@@ -1137,6 +1137,13 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         </label>
 
       </div>
+      <!-- Test reading defaults -->
+      <div style="border-top:1px solid var(--border2);padding-top:1rem;margin-top:0.5rem">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Test reading defaults</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Starting values when a device has no previous readings. Leave blank for no starting value.</div>
+        <div id="reading-defaults" style="display:flex;flex-direction:column;gap:8px"></div>
+        <button onclick="resetReadingDefaults()" style="font-family:var(--sans);margin-top:10px;padding:8px 16px;font-size:12px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Reset to standard</button>
+      </div>
       <!-- Map pin colours -->
       <div style="border-top:1px solid var(--border2);padding-top:1rem;margin-top:0.5rem">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">🗺 Map pin colours</div>
@@ -4063,12 +4070,12 @@ const READING_FIELDS={
     {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:2, def:50},
     {k:'rv',   label:'Relief valve',      hint:'opened at',      step:2, def:20},
     {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:2, def:20},
-    {k:'line', label:'Main pressure',     hint:'',               step:50},
+    {k:'line', label:'Main pressure',     hint:'',               step:50, def:500},
   ],
   DCV:[
     {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:2, def:20},
     {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:2, def:20},
-    {k:'line', label:'Main pressure',     hint:'',               step:50},
+    {k:'line', label:'Main pressure',     hint:'',               step:50, def:500},
   ],
 };
 const LAST_KIT_KEY='fp_last_test_kit_v1';
@@ -4076,6 +4083,46 @@ const LAST_KIT_KEY='fp_last_test_kit_v1';
 function tradehackEnabled(){return getSetting('tradehackEnabled',true);}
 let _pendingReadings=null;   // attached to the test log entry by saveTest()
 let _rdCtx=null;             // {result, next, type, prev}
+
+// Starting value when a device has no earlier readings: Settings override, else built-in default.
+// A blank setting means "no starting value".
+function readingDefault(type,f){
+  const o=(getSetting('readingDefaults',{})||{})[type]||{};
+  if(Object.prototype.hasOwnProperty.call(o,f.k)) return o[f.k]===null?'':o[f.k];
+  return f.def!==undefined?f.def:'';
+}
+function renderReadingDefaults(){
+  const box=document.getElementById('reading-defaults'); if(!box) return;
+  const names={RPZD:'RPZD',DCV:'DCV'};
+  box.innerHTML=Object.keys(READING_FIELDS).map(t=>`
+    <div style="padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">${names[t]}</div>
+      ${READING_FIELDS[t].map(f=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0">
+          <label for="rdef-${t}-${f.k}" style="font-size:14px;color:var(--text)">${f.label}</label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input id="rdef-${t}-${f.k}" type="text" inputmode="decimal" value="${readingDefault(t,f)}" placeholder="none"
+              onchange="saveReadingDefault('${t}','${f.k}',this)"
+              style="width:84px;height:40px;text-align:center;font:600 16px var(--mono);border-radius:8px;border:1px solid var(--border);background:var(--surface)">
+            <span style="font-size:12px;color:var(--text3);width:26px">kPa</span>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+function saveReadingDefault(type,k,inp){
+  const all=JSON.parse(JSON.stringify(getSetting('readingDefaults',{})||{}));
+  all[type]=all[type]||{};
+  const v=parseFloat(inp.value);
+  all[type][k]=isNaN(v)?null:v;
+  inp.value=isNaN(v)?'':v;
+  saveSetting('readingDefaults',all);
+  showToast('Default saved');
+}
+function resetReadingDefaults(){
+  saveSetting('readingDefaults',{});
+  renderReadingDefaults();
+  showToast('Defaults reset');
+}
 
 // Most recent earlier readings for this device of the same type
 function lastReadings(d,type){
@@ -4137,7 +4184,7 @@ function renderReadingsSheet(){
   const rows=READING_FIELDS[type].map(f=>{
     const lastV=prev&&prev.readings[f.k];
     const hasLast=lastV!==undefined&&lastV!==null&&lastV!=='';
-    const pv=hasLast?lastV:(f.def!==undefined?f.def:'');
+    const pv=hasLast?lastV:readingDefault(type,f);
     const has=pv!=='';
     return `
     <div style="padding:10px 0;border-bottom:1px solid var(--border2)">
@@ -4156,7 +4203,7 @@ function renderReadingsSheet(){
       </div>
     </div>`;}).join('');
 
-  const nPrefill=READING_FIELDS[type].filter(f=>(prev&&prev.readings[f.k]!=null&&prev.readings[f.k]!=='')||f.def!==undefined).length;
+  const nPrefill=READING_FIELDS[type].filter(f=>(prev&&prev.readings[f.k]!=null&&prev.readings[f.k]!=='')||readingDefault(type,f)!=='').length;
   sheet.innerHTML=head+`
     <style>
       .rd-in.rd-prefill{background:#fff3b0;border-color:#e0b400}
@@ -4488,6 +4535,7 @@ function loadSettingsCheckboxes(){
   if(el4) el4.checked=getSetting('autoUpdateGps',false);
   const el5=document.getElementById('setting-copy-serial');
   if(el5) el5.checked=getSetting('copySerialOnRecord',true);
+  renderReadingDefaults();
   syncIntervalUI();
 }
 

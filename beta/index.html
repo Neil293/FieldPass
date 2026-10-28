@@ -2716,6 +2716,7 @@ function openDevice(id){
               <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${resultBg};color:${resultColour}">${l.result}</span>
             </div>
             <div style="font-size:11px;color:var(--text3)">${l.tester}${l.notes?` · ${l.notes.slice(0,40)}${l.notes.length>40?'…':''}`:''}</div>
+            ${l.readings&&fmtReadings(l.readings)?`<div style="font-size:11px;color:var(--text2);font-family:var(--mono);margin-top:2px">${fmtReadings(l.readings)}${l.readings.kit?` · kit ${l.readings.kit}`:''}</div>`:''}
           </div>
           ${deleteBtn}
         </div>`;
@@ -4037,16 +4038,239 @@ function markTestedToday(result){
       showToast('📋 Serial '+serial+' copied');
     }).catch(()=>{});
   }
+  _pendingReadings=null;
   if(result==='Fail'){
-    showFailNotesPopup();
+    showReadingsSheet('Fail',showFailNotesPopup);
   } else if(result==='No Access'){
     showNotesPopup('no_access');
   } else if(result==='Repaired'){
-    showRepairedNotesPopup();
+    showReadingsSheet('Repaired',showRepairedNotesPopup);
   } else {
-    saveTest();
+    showReadingsSheet(result||'Pass',saveTest);
   }
 }
+// ── Test readings sheet (Pass / Fail / Repaired) ─────────
+// Fields are provisional until the BackFlowID and Tradehack forms are mapped.
+const READING_FIELDS={
+  RPZD:[
+    {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:1},
+    {k:'rv',   label:'Relief valve',      hint:'opened at',      step:1},
+    {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:1},
+    {k:'line', label:'Line pressure',     hint:'supply',         step:10},
+  ],
+  DCV:[
+    {k:'cv1',  label:'Check valve 1',     hint:'differential',   step:1},
+    {k:'cv2',  label:'Check valve 2',     hint:'differential',   step:1},
+    {k:'line', label:'Line pressure',     hint:'supply',         step:10},
+  ],
+};
+const LAST_KIT_KEY='fp_last_test_kit_v1';
+let _pendingReadings=null;   // attached to the test log entry by saveTest()
+let _rdCtx=null;             // {result, next, type, prev}
+
+// Most recent earlier readings for this device of the same type
+function lastReadings(d,type){
+  const log=(d&&d.testLog)||[];
+  for(let i=log.length-1;i>=0;i--){
+    const r=log[i].readings;
+    if(r&&r.type===type) return {readings:r,date:log[i].date};
+  }
+  return null;
+}
+
+function showReadingsSheet(result,next){
+  const d=devices.find(x=>x.id===editId);
+  if(!d){next();return;}
+  const type=(document.getElementById('e-type')||{}).value||d.type||'';
+  _rdCtx={result,next,type};
+  document.getElementById('readings-popup')?.remove();
+  const pop=document.createElement('div');
+  pop.id='readings-popup';
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:flex;align-items:flex-end;justify-content:center';
+  pop.innerHTML='<div id="rd-sheet" style="background:var(--surface);width:100%;max-width:560px;border-radius:22px 22px 0 0;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.3);max-height:92vh"></div>';
+  document.body.appendChild(pop);
+  renderReadingsSheet();
+}
+
+function renderReadingsSheet(){
+  const sheet=document.getElementById('rd-sheet'); if(!sheet||!_rdCtx) return;
+  const d=devices.find(x=>x.id===editId);
+  const {result,type}=_rdCtx;
+  const colour=result==='Fail'?'var(--red)':result==='Repaired'?'#1565c0':'var(--green)';
+  const head=`
+    <div style="display:flex;justify-content:center;padding:10px 0 0"><div style="width:40px;height:4px;background:rgba(0,0,0,.15);border-radius:2px"></div></div>
+    <div style="padding:.75rem 1.25rem;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="min-width:0">
+        <div style="font-size:16px;font-weight:600;color:${colour}">${result} — readings${type?` <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text2);vertical-align:middle">${type}</span>`:''}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(d.make||'')+' '+(d.model||'')} · S/N ${d.serial||'—'}</div>
+      </div>
+      <button onclick="closeReadingsSheet()" aria-label="Cancel" style="width:34px;height:34px;flex-shrink:0;border-radius:8px;border:1px solid var(--border);background:transparent;font-size:18px;color:var(--text2)">✕</button>
+    </div>`;
+
+  if(!type){
+    sheet.innerHTML=head+`
+      <div style="padding:1.25rem">
+        <div style="font-size:14px;color:var(--text2);margin-bottom:12px">What type of device is this?</div>
+        <div style="display:flex;gap:10px">
+          <button onclick="rdSetType('RPZD')" style="flex:1;padding:18px 8px;font:600 16px var(--sans);border-radius:var(--r);border:1px solid var(--border);background:var(--surface2)">RPZD</button>
+          <button onclick="rdSetType('DCV')" style="flex:1;padding:18px 8px;font:600 16px var(--sans);border-radius:var(--r);border:1px solid var(--border);background:var(--surface2)">DCV</button>
+        </div>
+      </div>
+      <div style="padding:.75rem 1.25rem 2rem;border-top:1px solid var(--border2)">
+        <button onclick="rdSkip()" style="width:100%;padding:13px;font:500 14px var(--sans);border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--text2)">Skip readings</button>
+      </div>`;
+    return;
+  }
+
+  const prev=lastReadings(d,type);
+  _rdCtx.prev=prev;
+  let kit='';try{kit=localStorage.getItem(LAST_KIT_KEY)||'';}catch(e){}
+  const rows=READING_FIELDS[type].map(f=>{
+    const pv=prev&&prev.readings[f.k];
+    const has=pv!==undefined&&pv!==null&&pv!=='';
+    return `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border2)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${f.label} <span style="font-weight:400;color:var(--text3);font-size:12px">${f.hint}</span></div>
+        <div style="font-size:11px;color:var(--text3)">${has?'Last: '+pv:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button type="button" class="rd-step" data-k="${f.k}" data-d="${-f.step}" aria-label="Decrease ${f.label}" style="width:56px;height:52px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font:500 26px var(--sans);color:var(--text);touch-action:manipulation">−</button>
+        <div style="flex:1;position:relative">
+          <input id="rd-${f.k}" data-k="${f.k}" class="rd-in${has?' rd-prefill':''}" type="text" inputmode="decimal" autocomplete="off" value="${has?pv:''}" placeholder="—"
+            style="width:100%;height:52px;text-align:center;font:600 22px var(--mono);border-radius:12px;border:1px solid var(--border);padding:0 40px 0 10px">
+          <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none">kPa</span>
+        </div>
+        <button type="button" class="rd-step" data-k="${f.k}" data-d="${f.step}" aria-label="Increase ${f.label}" style="width:56px;height:52px;flex-shrink:0;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font:500 26px var(--sans);color:var(--text);touch-action:manipulation">+</button>
+      </div>
+    </div>`;}).join('');
+
+  const nPrefill=prev?READING_FIELDS[type].filter(f=>prev.readings[f.k]!=null&&prev.readings[f.k]!=='').length:0;
+  sheet.innerHTML=head+`
+    <style>
+      .rd-in.rd-prefill{background:#fff3b0;border-color:#e0b400}
+      .rd-step:active{background:var(--border)!important}
+    </style>
+    <div style="padding:.25rem 1.25rem .75rem;overflow-y:auto;flex:1">
+      ${prev
+        ?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin:10px 0 4px;border-radius:10px;background:#fff8d6;font-size:12px;color:#6b5500">
+            <span>Yellow = copied from ${fmtDate(prev.date)}. Adjust or confirm.</span>
+            ${nPrefill?`<button type="button" onclick="rdConfirmAll()" style="flex-shrink:0;padding:8px 10px;font:600 12px var(--sans);border-radius:8px;border:1px solid #e0b400;background:#fff;color:#6b5500">Same as last</button>`:''}
+          </div>`
+        :`<div style="padding:10px 0 2px;font-size:12px;color:var(--text3)">No earlier readings for this device — enter today's.</div>`}
+      ${rows}
+      <div style="padding:12px 0 4px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">Test kit</label>
+        <input id="rd-kit" type="text" value="${String(kit).replace(/"/g,'&quot;')}" placeholder="Kit serial / name" style="width:100%;height:44px;padding:0 12px;font-size:15px;border-radius:10px;border:1px solid var(--border)">
+      </div>
+    </div>
+    <div style="padding:.75rem 1.25rem 2rem;border-top:1px solid var(--border2);display:flex;gap:10px">
+      <button onclick="rdSkip()" style="flex:1;padding:13px;font:500 14px var(--sans);border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--text2)">Skip</button>
+      <button onclick="rdSave()" style="flex:2;padding:13px;font:700 14px var(--sans);border-radius:var(--r);border:none;background:${colour};color:#fff">Save readings</button>
+    </div>`;
+  rdWire(sheet);
+}
+
+function rdWire(sheet){
+  // Typing in a field confirms it
+  sheet.querySelectorAll('.rd-in').forEach(inp=>{
+    inp.addEventListener('input',()=>inp.classList.remove('rd-prefill'));
+    inp.addEventListener('keydown',e=>{
+      if(e.key!=='Enter') return;
+      e.preventDefault();
+      const all=[...sheet.querySelectorAll('.rd-in')];
+      const nx=all[all.indexOf(inp)+1];
+      nx?nx.focus():inp.blur();
+    });
+  });
+  // +/- with press-and-hold repeat
+  sheet.querySelectorAll('.rd-step').forEach(btn=>{
+    let t1=null,t2=null;
+    const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+    btn.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      rdBump(btn.dataset.k,parseFloat(btn.dataset.d));
+      t1=setTimeout(()=>{t2=setInterval(()=>rdBump(btn.dataset.k,parseFloat(btn.dataset.d)),90);},450);
+    });
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,stop));
+    btn.addEventListener('contextmenu',e=>e.preventDefault());
+  });
+}
+
+function rdBump(k,delta){
+  const inp=document.getElementById('rd-'+k); if(!inp) return;
+  const cur=parseFloat(inp.value);
+  let v=(isNaN(cur)?0:cur)+delta;
+  if(v<0) v=0;
+  inp.value=String(Math.round(v*10)/10);
+  inp.classList.remove('rd-prefill');
+}
+
+function rdConfirmAll(){
+  document.querySelectorAll('#rd-sheet .rd-in.rd-prefill').forEach(i=>i.classList.remove('rd-prefill'));
+  showToast('Readings confirmed');
+}
+
+function rdSetType(t){
+  _rdCtx.type=t;
+  const sel=document.getElementById('e-type'); if(sel) sel.value=t;
+  const d=devices.find(x=>x.id===editId); if(d) d.type=t;
+  renderReadingsSheet();
+}
+
+function _rdCollect(){
+  const {type,result}=_rdCtx;
+  const r={type};
+  READING_FIELDS[type].forEach(f=>{
+    const v=parseFloat((document.getElementById('rd-'+f.k)||{}).value);
+    r[f.k]=isNaN(v)?null:v;
+  });
+  const kit=((document.getElementById('rd-kit')||{}).value||'').trim();
+  if(kit){r.kit=kit;try{localStorage.setItem(LAST_KIT_KEY,kit);}catch(e){}}
+  r.result=result;
+  return r;
+}
+
+function rdSave(){
+  if(!_rdCtx||!_rdCtx.type) return;
+  const unconfirmed=document.querySelectorAll('#rd-sheet .rd-in.rd-prefill').length;
+  if(unconfirmed&&!confirm(unconfirmed+' reading'+(unconfirmed>1?'s are':' is')+' still last test\'s value (yellow).\n\nUse '+(unconfirmed>1?'them':'it')+' as today\'s reading'+(unconfirmed>1?'s':'')+'?')) return;
+  _pendingReadings=_rdCollect();
+  const next=_rdCtx.next;
+  _closeReadings(next);
+}
+
+function rdSkip(){
+  _pendingReadings=null;
+  const next=_rdCtx&&_rdCtx.next;
+  _closeReadings(next);
+}
+
+function closeReadingsSheet(){
+  // Cancel: nothing recorded, back to the device
+  _pendingReadings=null;
+  const d=devices.find(x=>x.id===editId)||{};
+  document.getElementById('f-result2').value=d.testResult||'Pending';
+  document.getElementById('f-date').value=d.testDate||'';
+  _closeReadings(null);
+}
+
+function _closeReadings(cb){
+  if(document.activeElement) document.activeElement.blur();
+  setTimeout(()=>{
+    document.getElementById('readings-popup')?.remove();
+    _rdCtx=null;
+    if(cb) cb();
+  },80);
+}
+
+function fmtReadings(r){
+  if(!r) return '';
+  const lab={cv1:'CV1',rv:'RV',cv2:'CV2',line:'Line'};
+  const parts=(READING_FIELDS[r.type]||[]).filter(f=>r[f.k]!=null).map(f=>lab[f.k]+' '+r[f.k]);
+  return parts.length?parts.join(' · ')+' kPa':'';
+}
+
 function showFailNotesPopup(){
   showNotesPopup('fail');
 }
@@ -4172,9 +4396,12 @@ function saveTest(){
     if(!d.testLog)d.testLog=[];
     const entry={date:d.testDate,result:d.testResult,tester:currentUser?currentUser.name:'Unknown',testerUsername:currentUser?currentUser.username:'',notes:d.notes,ts:Date.now()};
     // Only add if it's a new entry (different date or first entry)
+    if(_pendingReadings&&_pendingReadings.result===d.testResult){const r={..._pendingReadings};delete r.result;entry.readings=r;}
     const last=d.testLog[d.testLog.length-1];
     if(!last||last.date!==entry.date||last.result!==entry.result){d.testLog.push(entry);}
+    else if(entry.readings){last.readings=entry.readings;}
   }
+  _pendingReadings=null;
   save();closeModal();populateSuburbFilter();render();showToast('Saved.');
   // Auto-update saved GPS location if setting enabled
   const isTestActionForGps=['Pass','Fail','Repaired','Decommissioned'].includes(d.testResult);

@@ -1,6 +1,6 @@
 // BETA copy of the FieldPass service worker (scope /FieldPass/beta/)
 // ComplyTrack Service Worker — offline support
-const CACHE_NAME = 'fieldpass-beta-v2';
+const CACHE_NAME = 'fieldpass-beta-v3';
 const TILE_CACHE = 'fieldpass-beta-tiles-v1';
 
 // App shell files to cache on install

@@ -2138,6 +2138,8 @@ function getStatus(d){
   return getStatusForYear(d, new Date().getFullYear());
 }
 
+// First year FieldPass tracked testing — overdue carry-over applies from the following year
+const STATUS_CARRY_FROM_YEAR=2026;
 function getStatusForYear(d, year){
   const now=new Date();
   const currentYear=now.getFullYear();
@@ -2150,6 +2152,16 @@ function getStatusForYear(d, year){
     if(ty===year){
       if(d.testResult==='Fail') return'failed';
       return'complete';
+    }
+  }
+  // Carry flags over into the new year (current-year view only; past-year reports unchanged)
+  if(year===currentYear){
+    // A failed device stays Failed until a new result is recorded
+    if(d.testDate&&d.testResult==='Fail') return'failed';
+    // Overdue at the end of last year (no test last year) stays Overdue until tested
+    if(d.scheduledMonth&&year-1>=STATUS_CARRY_FROM_YEAR){
+      const lastY=d.testDate?parseInt(d.testDate.slice(0,4)):0;
+      if(lastY<year-1) return'overdue';
     }
   }
   if(!d.scheduledMonth) return'pending';

@@ -1132,6 +1132,14 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           </div>
         </label>
         <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-handoff-copy" onchange="saveSetting('handoffCopy',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Copy test for BackFlowID / Tradehack</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">After saving readings, copy the test to the clipboard for the BF Fill bookmark (replaces the serial / fail-note copy)</div>
+            <button type="button" onclick="event.preventDefault();copyBffillBookmark()" style="font-family:var(--sans);margin-top:8px;padding:7px 12px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--accent);cursor:pointer">Copy BF Fill bookmark</button>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
           <input type="checkbox" id="setting-tradehack-enabled" onchange="saveSetting('tradehackEnabled',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:500;color:var(--text)">Send results to Tradehack</div>
@@ -2765,7 +2773,8 @@ function openDevice(id){
           ${deleteBtn}
         </div>`;
       }).join('');
-      histEl.innerHTML=`<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px">Test history</div>${cards}`;
+      const hasRd=d.testLog.some(l=>l.readings);
+      histEl.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)">Test history</div>${hasRd?`<button onclick="copyLastHandoff(${d.id})" style="font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--accent);cursor:pointer">📋 Copy for BackFlowID</button>`:''}</div>${cards}`;
       histEl.style.display='block';
     } else {
       histEl.style.display='none';
@@ -4477,6 +4486,39 @@ function kitWarnHtml(k){
   if(s==='soon') return `<div style="margin:10px 1.25rem 0;padding:10px 12px;border-radius:10px;background:var(--amber-bg);border:1px solid var(--amber);color:var(--amber);font-size:13px;font-weight:600">Test kit requires testing before ${fmtDate(k.dueDate)} — ${kEsc(kitLabel(k))}</div>`;
   return '';
 }
+// ── Hand-off to BackFlowID / Tradehack (BF Fill bookmark) ──
+const BFFILL_BOOKMARK="javascript:(function(){var s=document.createElement('script');s.src='https://neil293.github.io/FieldPass/tools/bffill.js?'+Date.now();s.onerror=function(){alert('BF Fill: could not load script')};document.body.appendChild(s)})()";
+function handoffPacket(d,entry){
+  const r=entry.readings||{};
+  const k=r.kitInfo||{};
+  const now=new Date();
+  return {
+    v:1,ts:Date.now(),
+    serial:d.serial||'',make:d.make||'',model:d.model||'',size:d.size||'',type:r.type||d.type||'',
+    result:entry.result==='Fail'?'Fail':'Pass',fpResult:entry.result,
+    date:entry.date,time:String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),
+    cv1:r.cv1,rv:r.rv,cv2:r.cv2,main:r.line,
+    kit:k.serial?{serial:k.serial,make:k.make||'',calDate:k.calDate||'',dueDate:k.dueDate||''}:(r.kit?{serial:r.kit}:null),
+    remarks:entry.result==='Pass'?'':(entry.notes||''),
+    location:d.location||'',lat:d.lat||'',lng:d.lng||'',bfid:d.backflowId||'',
+    tradehack:tradehackEnabled(),
+  };
+}
+function copyHandoff(d,entry,quiet){
+  const text='FPBF1 '+JSON.stringify(handoffPacket(d,entry));
+  if(!navigator.clipboard||!navigator.clipboard.writeText){if(!quiet)showToast('Clipboard not available');return;}
+  navigator.clipboard.writeText(text).then(()=>showToast(quiet?'Saved · test copied for BackFlowID':'Test copied for BackFlowID / Tradehack'),()=>{if(!quiet)showToast('Could not copy — tap again');});
+}
+function copyLastHandoff(id){
+  const d=devices.find(x=>x.id===id); if(!d) return;
+  const e=[...(d.testLog||[])].reverse().find(l=>l.readings);
+  if(!e){showToast('No readings recorded for this device yet');return;}
+  copyHandoff(d,e,false);
+}
+function copyBffillBookmark(){
+  if(!navigator.clipboard){showToast('Clipboard not available');return;}
+  navigator.clipboard.writeText(BFFILL_BOOKMARK).then(()=>showToast('BF Fill bookmark copied'),()=>showToast('Could not copy'));
+}
 function rdKitChanged(id){
   const w=document.getElementById('rd-kit-warn');
   if(w) w.innerHTML=kitWarnHtml(getKits().find(k=>k.id===id));
@@ -4680,8 +4722,11 @@ function saveTest(){
     if(!last||last.date!==entry.date||last.result!==entry.result){d.testLog.push(entry);}
     else if(entry.readings){last.readings=entry.readings;}
   }
+  const _handoffEntry=(d.testLog||[]).slice(-1)[0];
+  const _handoff=_pendingReadings&&_handoffEntry&&_handoffEntry.readings&&_handoffEntry.result===d.testResult;
   _pendingReadings=null;
   save();closeModal();populateSuburbFilter();render();showToast('Saved.');
+  if(_handoff&&getSetting('handoffCopy',true)) copyHandoff(d,_handoffEntry,true);
   // Auto-update saved GPS location if setting enabled
   const isTestActionForGps=['Pass','Fail','Repaired','Decommissioned'].includes(d.testResult);
   if(isTestActionForGps&&getSetting('autoUpdateGps',false)){
@@ -4737,6 +4782,7 @@ function loadSettingsCheckboxes(){
   const el3=document.getElementById('setting-follow-backflow-url');
   if(el3) el3.checked=getSetting('followBackflowUrl',false);
   {const th=document.getElementById('setting-tradehack-enabled'); if(th) th.checked=tradehackEnabled();}
+  {const hc=document.getElementById('setting-handoff-copy'); if(hc) hc.checked=getSetting('handoffCopy',true);}
   const el4=document.getElementById('setting-auto-update-gps');
   if(el4) el4.checked=getSetting('autoUpdateGps',false);
   const el5=document.getElementById('setting-copy-serial');

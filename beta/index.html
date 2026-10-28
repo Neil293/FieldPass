@@ -949,6 +949,9 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
         <button class="stab" id="stab-settings" onclick="switchSettingsTab('settings')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);white-space:nowrap;flex-shrink:0">
           ⚙️ Settings
         </button>
+        <button class="stab" id="stab-kits" onclick="switchSettingsTab('kits')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);white-space:nowrap;flex-shrink:0">
+          🧪 Test kits
+        </button>
         <button class="stab" id="stab-developer" onclick="switchSettingsTab('developer')" style="font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:rgba(126,184,247,.8);white-space:nowrap;flex-shrink:0;display:none">
           🛠 Developer
         </button>
@@ -1082,6 +1085,12 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
     </div>
 
     <!-- Settings pane -->
+    <!-- Test kits tab -->
+    <div id="settings-pane-kits" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1.25rem 2rem;flex:1">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Test kits and their calibration details. Each user picks their current kit under Users → Edit, or on the readings screen.</div>
+      <div id="kits-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="btn btn-p" onclick="openKitEditor('')" style="margin-top:12px;width:100%;padding:12px;font-size:14px">+ Add test kit</button>
+    </div>
     <div id="settings-pane-settings" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.25rem 1.25rem 2rem;flex:1">
       <div style="display:flex;flex-direction:column;gap:8px">
 
@@ -4063,6 +4072,134 @@ function markTestedToday(result){
     showReadingsSheet(result||'Pass',saveTest);
   }
 }
+// ── Test kits (Settings → Kits) ─────────────────────────
+// Stored in settings.testKits so they sync with the rest of the settings.
+// Each user's current kit is user.kitId.
+function getKits(){const k=getSetting('testKits',[]);return Array.isArray(k)?k:[];}
+function saveKits(k){saveSetting('testKits',k);}
+function kitLabel(k){return k?[k.make,k.serial?'S/N '+k.serial:''].filter(Boolean).join(' · '):'';}
+function kitDueStatus(k){
+  // 'overdue' | 'soon' (within 30 days) | 'ok' | '' (no due date)
+  if(!k||!k.dueDate) return '';
+  const due=new Date(k.dueDate+'T23:59:59'), now=new Date();
+  if(due<now) return 'overdue';
+  if((due-now)/86400000<=30) return 'soon';
+  return 'ok';
+}
+function kitDueText(k){
+  if(!k) return '';
+  const s=kitDueStatus(k);
+  const cal=k.calDate?'Calibrated '+fmtDate(k.calDate):'';
+  const due=k.dueDate?'due '+fmtDate(k.dueDate):'';
+  const txt=[cal,due].filter(Boolean).join(' · ');
+  if(s==='overdue') return `<span style="color:var(--red);font-weight:600">Calibration overdue — ${due}</span>`;
+  if(s==='soon') return `<span style="color:var(--amber);font-weight:600">${txt} (due soon)</span>`;
+  return txt;
+}
+function getUserKitId(){
+  if(!currentUser) return '';
+  const u=getUsers().find(x=>x.username===currentUser.username);
+  const id=(u&&u.kitId)||'';
+  return getKits().some(k=>k.id===id)?id:'';
+}
+function setUserKitId(id){
+  if(!currentUser) return;
+  const users=getUsers(); const u=users.find(x=>x.username===currentUser.username);
+  if(!u) return;
+  u.kitId=id||''; saveUsers(users); currentUser.kitId=u.kitId;
+}
+
+function renderKitsPane(){
+  const box=document.getElementById('kits-list'); if(!box) return;
+  const kits=getKits();
+  const mine=getUserKitId();
+  if(!kits.length){
+    box.innerHTML='<div style="color:var(--text3);font-size:13px;padding:.5rem 0">No test kits yet. Add one from its calibration sticker.</div>';
+    return;
+  }
+  box.innerHTML=kits.map(k=>{
+    const s=kitDueStatus(k);
+    const bar=s==='overdue'?'var(--red)':s==='soon'?'var(--amber)':'var(--green)';
+    return `<div onclick="openKitEditor('${k.id}')" style="display:flex;gap:10px;padding:12px;border:1px solid var(--border2);border-left:4px solid ${bar};border-radius:var(--r);background:var(--surface2);cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px;color:var(--text)">${kEsc(kitLabel(k))||'(no make / serial)'} ${k.id===mine?'<span style="font-size:11px;font-weight:500;color:var(--accent)">● Your kit</span>':''}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${kitDueText(k)||'No calibration dates'}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${[k.range?'Range '+kEsc(k.range):'',k.reportNo?'Report '+kEsc(k.reportNo):'',k.calibratedBy?'By '+kEsc(k.calibratedBy):''].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div style="align-self:center;color:var(--text3);font-size:18px">›</div>
+    </div>`;
+  }).join('');
+}
+function kEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function openKitEditor(id){
+  const k=getKits().find(x=>x.id===id)||{id:'',make:'',serial:'',calDate:'',dueDate:'',range:'',reportNo:'',calibratedBy:''};
+  const isNew=!k.id;
+  let m=document.getElementById('kit-modal');
+  if(!m){m=document.createElement('div');m.id='kit-modal';m.className='mbg';m.onclick=e=>{if(e.target===m)m.style.display='none';};document.body.appendChild(m);}
+  const v=x=>kEsc(x||'');
+  m.innerHTML=`
+    <div class="modal" style="max-width:480px">
+      <div class="mhdr">
+        <div><div class="mtitle">${isNew?'Add test kit':'Edit test kit'}</div><div class="msub-info">From the calibration sticker</div></div>
+        <button class="mclose" onclick="document.getElementById('kit-modal').style.display='none'">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div class="frow">
+          <div class="field"><label>Make</label><input type="text" id="kit-make" value="${v(k.make)}" placeholder="e.g. Watts"></div>
+          <div class="field"><label>Serial number</label><input type="text" id="kit-serial" value="${v(k.serial)}" placeholder="e.g. TK99-1234"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Calibration date</label><input type="date" id="kit-cal" value="${v(k.calDate)}" onchange="kitAutoDue()"></div>
+          <div class="field"><label>Due date</label><input type="date" id="kit-due" value="${v(k.dueDate)}"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Range</label><input type="text" id="kit-range" value="${v(k.range)}" placeholder="e.g. 0–100 kPa"></div>
+          <div class="field"><label>Report no.</label><input type="text" id="kit-report" value="${v(k.reportNo)}" placeholder="e.g. S000145"></div>
+        </div>
+        <div class="field"><label>Calibrated by</label><input type="text" id="kit-by" value="${v(k.calibratedBy)}" placeholder="e.g. Triple i (L.C)"></div>
+      </div>
+      <div class="mfooter">
+        ${isNew?'':`<button class="btn" style="color:var(--red);margin-right:auto" onclick="deleteKit('${k.id}')">Delete</button>`}
+        <button class="btn" onclick="document.getElementById('kit-modal').style.display='none'">Cancel</button>
+        <button class="btn btn-p" onclick="saveKit('${k.id}')">Save</button>
+      </div>
+    </div>`;
+  m.style.display='flex';
+}
+function kitAutoDue(){
+  // Fill the due date as calibration + 1 year when it's empty
+  const cal=document.getElementById('kit-cal').value, due=document.getElementById('kit-due');
+  if(cal&&!due.value){const [y,m,d]=cal.split('-');due.value=(+y+1)+'-'+m+'-'+(m==='02'&&d==='29'?'28':d);}
+}
+function saveKit(id){
+  const g=x=>document.getElementById(x).value.trim();
+  const rec={make:g('kit-make'),serial:g('kit-serial'),calDate:g('kit-cal'),dueDate:g('kit-due'),range:g('kit-range'),reportNo:g('kit-report'),calibratedBy:g('kit-by')};
+  if(!rec.make&&!rec.serial){showToast('Enter the make or serial number.');return;}
+  const kits=getKits();
+  if(id){const i=kits.findIndex(x=>x.id===id); if(i>=0) kits[i]={...kits[i],...rec};}
+  else{
+    const nk={id:'kit_'+Date.now().toString(36),...rec};
+    kits.push(nk);
+    if(!getUserKitId()) setUserKitId(nk.id);   // first kit becomes yours
+  }
+  saveKits(kits);
+  document.getElementById('kit-modal').style.display='none';
+  renderKitsPane(); showToast('Test kit saved');
+}
+function deleteKit(id){
+  if(!confirm('Delete this test kit? Past test records keep the kit details they were saved with.')) return;
+  saveKits(getKits().filter(x=>x.id!==id));
+  const users=getUsers(); let ch=false;
+  users.forEach(u=>{if(u.kitId===id){u.kitId='';ch=true;}});
+  if(ch){saveUsers(users); if(currentUser&&currentUser.kitId===id) currentUser.kitId='';}
+  document.getElementById('kit-modal').style.display='none';
+  renderKitsPane(); showToast('Test kit deleted');
+}
+function kitOptions(selected){
+  return '<option value="">— none —</option>'+getKits().map(k=>`<option value="${k.id}"${k.id===selected?' selected':''}>${kEsc(kitLabel(k))}${kitDueStatus(k)==='overdue'?' (calibration overdue)':''}</option>`).join('');
+}
+
 // ── Test readings sheet (Pass / Fail / Repaired) ─────────
 // Fields are provisional until the BackFlowID and Tradehack forms are mapped.
 const READING_FIELDS={
@@ -4222,7 +4359,11 @@ function renderReadingsSheet(){
       ${rows}
       <div style="padding:12px 0 4px">
         <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">Test kit</label>
-        <input id="rd-kit" type="text" value="${String(kit).replace(/"/g,'&quot;')}" placeholder="Kit serial / name" style="width:100%;height:44px;padding:0 12px;font-size:15px;border-radius:10px;border:1px solid var(--border)">
+        ${getKits().length
+          ?`<select id="rd-kit-sel" onchange="rdKitChanged(this.value)" style="width:100%;height:44px;padding:0 10px;font-size:15px;border-radius:10px;border:1px solid var(--border);background:var(--surface)">${kitOptions(getUserKitId())}</select>
+            <div id="rd-kit-due" style="font-size:12px;color:var(--text2);margin-top:4px">${kitDueText(getKits().find(k=>k.id===getUserKitId()))}</div>`
+          :`<input id="rd-kit" type="text" value="${String(kit).replace(/"/g,'&quot;')}" placeholder="Kit serial / name" style="width:100%;height:44px;padding:0 12px;font-size:15px;border-radius:10px;border:1px solid var(--border)">
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Tip: add your kits in Settings → Test kits to pick from a list.</div>`}
       </div>
     </div>
     <div style="padding:.75rem 1.25rem 2rem;border-top:1px solid var(--border2);display:flex;gap:10px">
@@ -4291,6 +4432,11 @@ function rdSetType(t){
   renderReadingsSheet();
 }
 
+function rdKitChanged(id){
+  setUserKitId(id);   // remember as this user's current kit
+  const el=document.getElementById('rd-kit-due');
+  if(el) el.innerHTML=kitDueText(getKits().find(k=>k.id===id));
+}
 function _rdCollect(){
   const {type,result}=_rdCtx;
   const r={type};
@@ -4298,14 +4444,27 @@ function _rdCollect(){
     const v=parseFloat((document.getElementById('rd-'+f.k)||{}).value);
     r[f.k]=isNaN(v)?null:v;
   });
-  const kit=((document.getElementById('rd-kit')||{}).value||'').trim();
-  if(kit){r.kit=kit;try{localStorage.setItem(LAST_KIT_KEY,kit);}catch(e){}}
+  const sel=document.getElementById('rd-kit-sel');
+  if(sel){
+    const k=getKits().find(x=>x.id===sel.value);
+    if(k){
+      r.kit=kitLabel(k);
+      // snapshot, so the record keeps the calibration details used on the day
+      r.kitInfo={id:k.id,make:k.make,serial:k.serial,calDate:k.calDate,dueDate:k.dueDate,range:k.range,reportNo:k.reportNo,calibratedBy:k.calibratedBy};
+    }
+  } else {
+    const kit=((document.getElementById('rd-kit')||{}).value||'').trim();
+    if(kit){r.kit=kit;try{localStorage.setItem(LAST_KIT_KEY,kit);}catch(e){}}
+  }
   r.result=result;
   return r;
 }
 
 function rdSave(){
   if(!_rdCtx||!_rdCtx.type) return;
+  const ksel=document.getElementById('rd-kit-sel');
+  const kk=ksel&&getKits().find(x=>x.id===ksel.value);
+  if(kk&&kitDueStatus(kk)==='overdue'&&!confirm('Test kit '+kitLabel(kk)+' was due for calibration on '+fmtDate(kk.dueDate)+'.\n\nSave with this kit anyway?')) return;
   const unconfirmed=document.querySelectorAll('#rd-sheet .rd-in.rd-prefill').length;
   if(unconfirmed&&!confirm(unconfirmed+' reading'+(unconfirmed>1?'s are':' is')+' still pre-filled (yellow), not changed today.\n\nUse '+(unconfirmed>1?'them':'it')+' as today\'s reading'+(unconfirmed>1?'s':'')+'?')) return;
   _pendingReadings=_rdCollect();
@@ -5870,7 +6029,7 @@ function deleteClient(id){
 function switchSettingsTab(tab){
   if(tab==='client') tab='clients';
   if(tab==='backup') tab='data';
-  ['users','clients','data','settings','developer'].forEach(t=>{
+  ['users','clients','data','settings','kits','developer'].forEach(t=>{
     const pane=document.getElementById('settings-pane-'+t);
     if(pane) pane.style.display=t===tab?'block':'none';
     const btn=document.getElementById('stab-'+t);
@@ -5881,6 +6040,8 @@ function switchSettingsTab(tab){
     }
   });
   if(tab==='settings') renderMapColourPickers();
+  if(tab==='kits') renderKitsPane();
+  {const b=document.getElementById('stab-'+tab); if(b&&b.scrollIntoView) b.scrollIntoView({block:'nearest',inline:'nearest'});}
   if(tab==='developer'){
     // Dev tab uses different active colour
     const devBtn=document.getElementById('stab-developer');
@@ -6254,6 +6415,10 @@ function openEditUser(username){
           <div class="field"><label>Supervisor No.</label><input type="text" id="eu-supervisor" value="${(u.supervisor||'').replace(/"/g,'&quot;')}" placeholder="e.g. 789012"></div>
           <div class="field"><label>Supervisor Expiry</label><input type="date" id="eu-supervisor-expiry" value="${u.supervisorExpiry||''}"></div>
         </div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin:10px 0 6px">Test kit</div>
+        <div class="field"><label>Current test kit <span style="font-weight:400;color:var(--text3)">(added to test results)</span></label>
+          <select id="eu-kit">${kitOptions(getKits().some(k=>k.id===u.kitId)?u.kitId:'')}</select>
+        </div>
         <div class="field">
           <label>Preset</label>
           <select id="eu-preset" onchange="applyEditUserPreset()" ${isSelf?'disabled style="opacity:.6"':''}>
@@ -6321,7 +6486,8 @@ function saveEditUser(i){
   const licenceExpiry=document.getElementById('eu-licence-expiry').value;
   const supervisor=document.getElementById('eu-supervisor').value.trim();
   const supervisorExpiry=document.getElementById('eu-supervisor-expiry').value;
-  users[i]={...u,name,username,permissions,company,phone,mobile,email,addr,licence,licenceExpiry,supervisor,supervisorExpiry};
+  const kitId=(document.getElementById('eu-kit')||{}).value||'';
+  users[i]={...u,name,username,permissions,company,phone,mobile,email,addr,licence,licenceExpiry,supervisor,supervisorExpiry,kitId};
   if(newPass){
     hashPassAsync(newPass).then(h=>{
       users[i].password=h;

@@ -2,6 +2,7 @@ package au.com.fairymeadowplumbing.fieldpass;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -35,7 +36,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,6 +75,9 @@ public class MainActivity extends Activity {
         "if(this.hasAttribute('download')&&(h.indexOf('blob:')===0||h.indexOf('data:')===0)){var n=this.getAttribute('download')||'download';" +
         "if(map[h]){save(n,map[h]);return;}fetch(h).then(function(r){return r.blob()}).then(function(b){save(n,b)});return;}" +
         "return ck.apply(this,arguments);};})()";
+
+    static final String APK_URL = "https://github.com/Neil293/FieldPass/releases/download/android-latest/FieldPass.apk";
+    static final String VERSION_URL = "https://github.com/Neil293/FieldPass/releases/download/android-latest/version.json";
 
     static final int REQ_FILE = 11, REQ_PERM_CAMERA = 12, REQ_PERM_GEO = 13, REQ_PERM_START = 14;
 
@@ -113,6 +121,59 @@ public class MainActivity extends Activity {
 
         askStartupPermissions();
         main.loadUrl(HOME_URL);
+        checkForUpdate();
+    }
+
+    /* ── update check ──────────────────────────────── */
+
+    int myVersionCode() {
+        try {
+            return (int) getPackageManager().getPackageInfo(getPackageName(), 0).getLongVersionCode();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    void checkForUpdate() {
+        long snoozed = prefs.getLong("updateSnoozeUntil", 0);
+        if (System.currentTimeMillis() < snoozed) return;
+        new Thread(() -> {
+            try {
+                HttpURLConnection c = (HttpURLConnection) new URL(VERSION_URL + "?t=" + System.currentTimeMillis()).openConnection();
+                c.setInstanceFollowRedirects(true);
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(8000);
+                c.setUseCaches(false);
+                if (c.getResponseCode() != 200) return;
+                StringBuilder sb = new StringBuilder();
+                try (InputStream in = c.getInputStream()) {
+                    byte[] buf = new byte[1024];
+                    int n;
+                    while ((n = in.read(buf)) > 0) sb.append(new String(buf, 0, n, "UTF-8"));
+                }
+                JSONObject j = new JSONObject(sb.toString());
+                int latest = j.optInt("versionCode", 0);
+                String name = j.optString("versionName", "");
+                String notes = j.optString("notes", "");
+                if (latest > myVersionCode()) runOnUiThread(() -> showUpdate(latest, name, notes));
+            } catch (Exception ignored) {
+                // offline or GitHub unreachable — try again next launch
+            }
+        }).start();
+    }
+
+    void showUpdate(int code, String name, String notes) {
+        if (isFinishing()) return;
+        String msg = "A newer version of the FieldPass app is ready" + (name.isEmpty() ? "" : " (" + name + ")") + "."
+            + (notes.isEmpty() ? "" : "\n\n" + notes)
+            + "\n\nTap Download, then open FieldPass.apk and tap Update. Your data and logins are kept.";
+        new AlertDialog.Builder(this)
+            .setTitle("Update available")
+            .setMessage(msg)
+            .setPositiveButton("Download", (d, w) -> openExternal(Uri.parse(APK_URL)))
+            .setNegativeButton("Later", (d, w) ->
+                prefs.edit().putLong("updateSnoozeUntil", System.currentTimeMillis() + 12L * 3600 * 1000).apply())
+            .show();
     }
 
     int dp(int v) {

@@ -188,6 +188,7 @@ Small native wrapper (plain Java, no AndroidX), package `au.com.fairymeadowplumb
 - On every page load on backflowid.com / qr2id.net / qr2id.com / tradehack.com.au it injects the BF Fill loader (sets `window.__BFFILL_APP`).
 - JS bridge `window.FieldPassApp`: `setPacket(text)` (FieldPass screen only) / `getPacket()`, `saveFile(name, mime, base64)` (FieldPass downloads → Downloads/FieldPass, via an injected shim for blob links), `openInApp(url)`, `isApp()`, `version()`. FieldPass's `copyHandoff` and `openBackflowLink` use it when present; BF Fill prefers the bridge packet and re-detects the page every second (BackFlowID changes screens without reloading).
 - Handles camera (getUserMedia + photo upload with camera option), GPS prompts, file chooser, window.open, back button.
+- **Update check**: on launch the app reads `version.json` from the android-latest release (the workflow writes `{versionCode, versionName, notes}` — notes = the commit subject, so write a clear one) and, if newer than the installed versionCode, offers Download (opens the APK link in Chrome) / Later (12 h snooze). Only shell changes in `android/` need a new APK; FieldPass and BF Fill load from the web.
 
 ## Switching beta to live (checklist)
 

@@ -29,7 +29,12 @@ jobs:
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Collect APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk FieldPass.apk
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk FieldPass.apk
+          MSG=$(git log -1 --pretty=%s | head -c 200)
+          jq -n --argjson code ${{ github.run_number }} --arg name "1.0.${{ github.run_number }}" --arg notes "$MSG" \
+            '{versionCode:$code, versionName:$name, notes:$notes}' > version.json
+          cat version.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -42,5 +47,5 @@ jobs:
         run: |
           gh release view android-latest >/dev/null 2>&1 || \
             gh release create android-latest --title "FieldPass Android app" --notes "Latest FieldPass Android app build."
-          gh release upload android-latest FieldPass.apk --clobber
+          gh release upload android-latest FieldPass.apk version.json --clobber
           gh release edit android-latest --notes "Build ${{ github.run_number }} (version 1.0.${{ github.run_number }}) from ${GITHUB_SHA::7}, $(date -u +'%Y-%m-%d %H:%M UTC'). Download FieldPass.apk below and open it on the phone to install or update."

@@ -1115,6 +1115,14 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
           </div>
         </label>
 
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+          <input type="checkbox" id="setting-show-directions-qr" onchange="saveSetting('showDirectionsQr',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Show "Scan for directions" QR code</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Show the map QR code box on each device page</div>
+          </div>
+        </label>
+
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-top:8px;margin-bottom:2px">Recording</div>
         <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
           <input type="checkbox" id="setting-follow-backflow-url" onchange="saveSetting('followBackflowUrl',this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
@@ -2758,7 +2766,11 @@ function openDevice(id){
   document.getElementById('m-loc-text').textContent=[d.complex,d.address,d.location].filter(Boolean).join(' · ')||'';
   document.getElementById('m-map-link').href=mapsUrl(d);
   // Generate QR code for map link
-  setTimeout(()=>generateQR(mapsUrl(d),(d.suburb||'')+' — '+(d.location||'').slice(0,40)),50);
+  if(getSetting('showDirectionsQr',true)){
+    setTimeout(()=>generateQR(mapsUrl(d),(d.suburb||'')+' — '+(d.location||'').slice(0,40)),50);
+  } else {
+    const qb=document.getElementById('m-qr-block'); if(qb) qb.style.display='none';
+  }
 
   // Populate editable fields
   document.getElementById('e-suburb').value=d.suburb||'';
@@ -4716,6 +4728,7 @@ function loadSettingsCheckboxes(){
   if(el4) el4.checked=getSetting('autoUpdateGps',false);
   const el5=document.getElementById('setting-copy-serial');
   if(el5) el5.checked=getSetting('copySerialOnRecord',true);
+  {const q=document.getElementById('setting-show-directions-qr'); if(q) q.checked=getSetting('showDirectionsQr',true);}
   renderReadingDefaults();
   syncIntervalUI();
 }

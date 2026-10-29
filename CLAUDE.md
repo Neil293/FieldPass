@@ -156,8 +156,8 @@ Use `{{placeholder}}` syntax for dynamic values in suburb compliance report emai
 
 Beta-only differences (all marked `BETA-ONLY` in `beta/index.html`) — remove these when promoting beta to live:
 1. Storage shim at the top of `<head>`: every localStorage key is prefixed `fpbeta:`, and on first open the live `fp_ / bf_ / scc_ / ct_` keys are copied in. The live app and beta share the neil293.github.io origin, so without this they would share data.
-2. Firebase SDK replaced by a stub — sync is off so the beta can never write `ct_sync/main`.
-3. Orange stripe, BETA badge (tap → re-copy live data), "Sync off (beta)" label.
+2. ~~Firebase stub~~ — since 29 Oct 2026 the beta **syncs with live** through `ct_sync/main` (Neil wants to record in either). The beta listener (marked `// BETA:`) keeps beta-only info when live's data arrives: device `type`, test-log `readings` (matched by date + result), settings keys live lacks (testKits, readingDefaults…), users' `kitId`; then pushes so the cloud has them. Live passes unknown fields through untouched when it saves. One-off pre-sync copy of the beta's own data in `fpbeta:presync_snapshot_v1`. Keep the merge code when promoting to live.
+3. Orange stripe and BETA badge (tap → info).
 4. `beta/sw.js` uses cache names starting `fieldpass-beta-` and only deletes its own caches; `beta/manifest.json` is "FieldPass Beta" with an orange theme.
 
 Beta features not yet in live:
@@ -200,8 +200,8 @@ Only when Neil asks ("switch FieldPass to the beta version"). Work on `main`, ru
 3. **Keep the old version online at `previous/`** (copy root `index.html`, `data.js`, `manifest.json`, icons, `sw.js`). It shares data with live, which is fine — it only ignores the new fields. In `previous/`: title "FieldPass (previous)", manifest name/short_name "FieldPass (previous)", and change `previous/sw.js` so its cache names start `fieldpass-previous-` and its activate step only deletes caches with that prefix (otherwise it wipes the live app's cache).
 4. **Build the new live `index.html` from `beta/index.html`**, removing every `BETA-ONLY` block:
    - the storage shim `<script>` at the top of `<head>` (live must use the plain keys);
-   - the Firebase stub — put back the original `<!-- Firebase SDK -->` module block from the old root `index.html`, unchanged;
-   - the orange stripe, BETA badge, `fpBetaMenu` and the `setSyncStatus` override at the end of `<body>`;
+   - (Firebase block is already the real one — keep it);
+   - the orange stripe, BETA badge and `fpBetaMenu` at the end of `<body>`;
    - `<title>` back to `FieldPass`, `theme-color` back to `#1a4d6e`.
    Keep everything else (device type, readings, test kits, `SEED_KITS`, status carry-over, settings).
    Check: `grep -n "BETA-ONLY\|fpbeta\|FP_BETA\|fp-beta" index.html` returns nothing.

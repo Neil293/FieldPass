@@ -51,10 +51,42 @@
 .sync-dot.error{background:#ef4444}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
-<!-- BETA-ONLY: Firebase sync disabled so the beta can never overwrite live data -->
-<script>
-window._firebaseError='Sync is turned off in FieldPass Beta';
-window.addEventListener('DOMContentLoaded',function(){ window.dispatchEvent(new Event('firebase-failed')); });
+<!-- Firebase SDK -->
+<script type="module">
+try {
+  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+  const { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs } =
+    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCeQ2jjSHSaiskMTX86QVr2aG3UC2_QMKY",
+    authDomain: "complytrack-6ac7e.firebaseapp.com",
+    projectId: "complytrack-6ac7e",
+    storageBucket: "complytrack-6ac7e.firebasestorage.app",
+    messagingSenderId: "464278358151",
+    appId: "1:464278358151:web:6a7619a2c4f5f0ed2cd022"
+  };
+
+  // Avoid re-initializing if already done (e.g. hot reload)
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window._db = db;
+  window._fbCollection = collection;
+  window._fbDoc = doc;
+  window._fbSetDoc = setDoc;
+  window._fbDeleteDoc = deleteDoc;
+  window._fbOnSnapshot = onSnapshot;
+  window._fbWriteBatch = writeBatch;
+  window._fbGetDocs = getDocs;
+  window._firebaseReady = true;
+  window.dispatchEvent(new Event('firebase-ready'));
+  console.log('✅ Firebase ready');
+} catch(err) {
+  console.error('❌ Firebase failed:', err);
+  window._firebaseError = err.message;
+  window.dispatchEvent(new Event('firebase-failed'));
+}
 </script>
 <style>
 :root{--bg:#f2f1ed;--surface:#fff;--surface2:#f0efe9;--border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.05);--text:#1c1c1a;--text2:#666660;--text3:#9c9c94;--accent:#1a4d6e;--accent-light:#e6f0f7;--red:#b83232;--red-bg:#fdf0f0;--amber:#a05a00;--amber-bg:#fef6e6;--green:#1a6636;--green-bg:#eaf4ee;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--r:10px;--rl:16px}
@@ -2023,6 +2055,39 @@ function startFirebaseListener(){
       // Apply if remote is newer than what THIS session last wrote
       if(remoteTs>sessionTs){
         console.log('FieldPass: applying remote data');
+        // BETA: one-off safety copy of the beta's own data before the first cloud data replaces it
+        try{
+          if(!localStorage.getItem('presync_snapshot_v1')){
+            localStorage.setItem('presync_snapshot_v1',JSON.stringify({at:new Date().toISOString(),devices,users:getUsers(),settings:getSettings()}));
+          }
+        }catch(e){console.warn('presync snapshot failed',e);}
+        // BETA: keep beta-only information that live FieldPass doesn't know about
+        let _keptLocal=false;
+        try{
+          if(data.devices&&data.devices.length>0){
+            const localById=new Map((devices||[]).map(x=>[x.id,x]));
+            data.devices.forEach(rd=>{
+              const ld=localById.get(rd.id); if(!ld) return;
+              if(rd.type===undefined&&ld.type!==undefined){rd.type=ld.type;_keptLocal=true;}
+              // readings on matching test-log entries (same date + result)
+              (rd.testLog||[]).forEach(re=>{
+                if(re.readings) return;
+                const le=(ld.testLog||[]).find(l=>l.readings&&l.date===re.date&&l.result===re.result);
+                if(le){re.readings=le.readings;_keptLocal=true;}
+              });
+            });
+            data.devices.forEach(rd=>{if(rd.type===undefined) rd.type=guessDeviceType(rd.make,rd.model);});
+          }
+          if(data.settings){
+            const ls=getSettings();
+            Object.keys(ls).forEach(k=>{if(!(k in data.settings)){data.settings[k]=ls[k];_keptLocal=true;}});
+          }
+          if(data.users){
+            const lu=getUsers();
+            data.users.forEach(ru=>{const l=lu.find(u=>u.username===ru.username);if(l&&l.kitId&&ru.kitId===undefined){ru.kitId=l.kitId;_keptLocal=true;}});
+          }
+        }catch(e){console.warn('beta merge failed',e);}
+        if(_keptLocal) setTimeout(()=>{if(typeof maybeSyncToFirebase==='function') maybeSyncToFirebase();},3000);
         if(data.devices&&data.devices.length>0){
           devices=data.devices;
           const storageKey=deviceKeyForClient(getActiveClientId());
@@ -7516,22 +7581,9 @@ updateOnlineStatus();
 <div id="fp-beta-stripe" style="position:fixed;top:0;left:0;right:0;height:4px;background:#e8590c;z-index:99999;pointer-events:none"></div>
 <button id="fp-beta-badge" onclick="fpBetaMenu()" style="position:fixed;left:10px;bottom:10px;z-index:99999;background:#e8590c;color:#fff;border:none;border-radius:999px;padding:6px 12px;font:600 12px/1 'DM Sans',sans-serif;letter-spacing:.06em;box-shadow:0 2px 8px rgba(0,0,0,.25)">BETA</button>
 <script>
-(function(){
-  var orig=window.setSyncStatus;
-  if(typeof orig!=='function') return;
-  window.setSyncStatus=function(){
-    orig.apply(this,arguments);
-    var l=document.getElementById('sync-label'), d=document.getElementById('sync-dot'), i=document.getElementById('sync-indicator');
-    if(l) l.textContent='Sync off (beta)';
-    if(d) d.className='sync-dot error';
-    if(i) i.onclick=fpBetaMenu;
-  };
-  setSyncStatus('offline');
-})();
 function fpBetaMenu(){
   var when=window.FP_BETA&&FP_BETA.copiedAt();
-  var msg='FieldPass Beta — test copy.\n\nData here is separate from live FieldPass and is not synced.\nLive data copied: '+(when?new Date(when).toLocaleString():'?')+'\n\nTap OK to replace beta data with a fresh copy of live data.';
-  if(confirm(msg)) FP_BETA.recopy();
+  alert('FieldPass Beta — test version.\n\nSyncs with live FieldPass through the cloud: devices, tests, users and settings are shared, so you can record in either.\n\nNew beta information (device type, readings, test kits) is kept even when live FieldPass saves.');
 }
 </script>
 </body>

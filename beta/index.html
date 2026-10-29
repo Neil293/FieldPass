@@ -6335,10 +6335,19 @@ function renderMapColourPickers(){
     upcoming:  'Upcoming',
     pending:   'No date / Pending',
     complete:  'Completed',
+    repaired:  'Repaired',
     failed:    'Failed',
     no_access: 'No Access'
   };
-  el.innerHTML=Object.entries(labels).map(([key,label])=>`
+  const same=getSetting('repairedSameAsComplete',true);
+  el.innerHTML=`
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer">
+      <input type="checkbox" ${same?'checked':''} onchange="setRepairedSameAsComplete(this.checked)" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text)">Repaired pins same colour as Completed</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Untick to give repaired devices their own colour below</div>
+      </div>
+    </label>`+Object.entries(labels).map(([key,label])=>key==='repaired'&&same?'':`
     <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)">
       <input type="color" value="${colours[key]||MAP_COLOURS_DEFAULT[key]}" 
         onchange="updateMapColour('${key}',this.value)"
@@ -6356,7 +6365,7 @@ function refreshMapPins(){
 }
 
 function updateMapColour(key,value){
-  const colours=getMapColours();
+  const colours=getMapColoursRaw();
   colours[key]=value;
   saveMapColours(colours);
   const val=document.getElementById('map-colour-val-'+key);
@@ -6408,6 +6417,7 @@ function renderInlineColourPickers(){
     upcoming:'Upcoming', pending:'No date', complete:'Completed',
     failed:'Failed', no_access:'No Access', repaired:'Repaired'
   };
+  if(getSetting('repairedSameAsComplete',true)) delete labels.repaired;
   el.innerHTML=Object.entries(labels).map(([key,label])=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)">
       <input type="color" value="${colours[key]||MAP_COLOURS_DEFAULT[key]}"
@@ -6920,11 +6930,25 @@ const MAP_COLOURS_DEFAULT={
   repaired:'#1565c0'
 };
 
-function getMapColours(){
+function getMapColoursRaw(){
   try{
     const s=localStorage.getItem(MAP_COLOURS_KEY);
     return s?{...MAP_COLOURS_DEFAULT,...JSON.parse(s)}:{...MAP_COLOURS_DEFAULT};
   }catch(e){return{...MAP_COLOURS_DEFAULT};}
+}
+// Repaired pins use the Completed colour unless turned off in Settings (repairedSameAsComplete, default on)
+function getMapColours(){
+  const c=getMapColoursRaw();
+  if(getSetting('repairedSameAsComplete',true)) c.repaired=c.complete;
+  return c;
+}
+function setRepairedSameAsComplete(on){
+  saveSetting('repairedSameAsComplete',on);
+  renderMapColourPickers();
+  renderInlineColourPickers();
+  renderMapLegend();
+  refreshMapPins();
+  showToast(on?'Repaired pins now match Completed':'Repaired pins use their own colour');
 }
 function saveMapColours(colours){
   localStorage.setItem(MAP_COLOURS_KEY,JSON.stringify(colours));

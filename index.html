@@ -1946,6 +1946,11 @@ function startFirebaseListener(){
       }
       const data=snap.data();
       if(!data){setSyncStatus('synced');return;}
+      // Ignore records that aren't FieldPass data (ComplyTrack used to share ct_sync/main — its data has assets, not devices)
+      if(!Array.isArray(data.devices)||!data.devices.length){
+        console.warn('FieldPass: cloud record has no FieldPass devices — ignored');
+        setSyncStatus('synced');return;
+      }
 
       const remoteTs=data.updatedAt||0;
       const remoteBy=data.updatedBy||'';

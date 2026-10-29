@@ -47,7 +47,7 @@ The entire application lives in `index.html` (~6,600 lines, ~280KB). This file c
 | `ct_email_templates_v1` | Email report templates |
 | `ct_filter_state_v1` | Persisted filter state (statuses, month, suburb) |
 
-**Firebase strategy:** Single-document sync (`ct_sync/main` in project `complytrack-6ac7e`, region `australia-southeast1`). All app state serializes into one Firestore document, keeping usage within the free tier.
+**Firebase strategy:** Single-document sync (`ct_sync/main` in project `complytrack-6ac7e`, region `australia-southeast1`). All app state serializes into one Firestore document, keeping usage within the free tier. ComplyTrack used to write the same document (each app's full `setDoc` replaced the other's data); since 29 Oct 2026 ComplyTrack uses `ct_sync/complytrack`, and the FieldPass listener (live and beta) ignores any record without a non-empty `devices` array.
 
 ### Key Data Models
 
@@ -128,7 +128,7 @@ Stat tiles have a hover/tap highlight: `.metric:hover { background: var(--surfac
 - **CDN resources**: cache-first with network fallback
 - **App files** (`fieldpass-v26`): network-first with cache fallback
 
-When updating cached resources, bump the `CACHE_NAME` constant in `sw.js` (currently `fieldpass-v26`).
+When updating cached resources, bump the `CACHE_NAME` constant in `sw.js` (currently `fieldpass-v37`).
 
 ### PWA Install
 

@@ -1069,7 +1069,7 @@ footer{text-align:center;color:var(--text3);font-size:12px;padding:1.5rem;border
 
         <!-- Restore default devices (admin only) -->
         <button id="settings-reset-btn" onclick="closeUserMgmt();resetToSeedData()" style="display:none;font-family:var(--sans);width:100%;padding:13px;font-size:14px;font-weight:500;border-radius:var(--r);border:1px solid rgba(184,50,50,.3);background:rgba(184,50,50,.06);color:var(--red);cursor:pointer;">
-          &#8635; Restore default devices
+          &#8635; Reset to original device list (erases data)
         </button>
 
         <!-- Sign out -->
@@ -1687,16 +1687,13 @@ function load(){
   }
 }
 
-function resetToSeedData(){
+async function resetToSeedData(){
   if(!can('manageUsers')){showToast('Admin access required.');return;}
   const client=getActiveClient();
   // Step 1: password prompt
-  const pwd=prompt('Enter your password to continue:');
+  const pwd=prompt('This ERASES your devices and test history and puts back the original device list.\n\n(To load a backup file, use "Restore from backup" instead.)\n\nEnter your password to continue:');
   if(pwd===null)return; // cancelled
-  const users=getUsers();
-  const me=users.find(u=>u.username===currentUser.username);
-  // Check legacy hash (works for both old and newly set passwords until next login upgrades them)
-  const pwdMatch=me&&(hashPassLegacy(pwd)===me.password||pwd===me.password);
+  const pwdMatch=await verifyCurrentPassword(pwd);
   if(!pwdMatch){
     showToast('Incorrect password.');
     return;
@@ -3108,16 +3105,13 @@ function cocAction(action){
     });
 }
 
-function deleteDevice(){
+async function deleteDevice(){
   const d=devices.find(x=>x.id===editId);
   if(!d) return;
   // Step 1: password check
   const pwd=prompt('Enter your admin password to delete this device:');
   if(pwd===null) return;
-  const users=getUsers();
-  const me=users.find(u=>u.username===currentUser.username);
-  // Check legacy hash (works for both old and newly set passwords until next login upgrades them)
-  const pwdMatch=me&&(hashPassLegacy(pwd)===me.password||pwd===me.password);
+  const pwdMatch=await verifyCurrentPassword(pwd);
   if(!pwdMatch){showToast('Incorrect password.');return;}
   // Step 2: confirm
   ctConfirm(
@@ -5458,6 +5452,12 @@ async function hashPassAsync(s){
 }
 
 // Legacy weak hash — kept only to detect old-format passwords for migration
+// True if pwd is the signed-in user's password (current SHA-256, legacy hash or old plain text)
+async function verifyCurrentPassword(pwd){
+  const me=getUsers().find(u=>u.username===currentUser.username);
+  if(!me||!pwd) return false;
+  return me.password===await hashPassAsync(pwd)||me.password===hashPassLegacy(pwd)||me.password===pwd;
+}
 function hashPassLegacy(s){
   let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
   return h.toString(36);

@@ -108,7 +108,8 @@ function detect(){
   var f=bfFields();
   if(f.some(function(x){return /check valve ?#? ?1|relief valve/.test(x.label)&&x.el.querySelector('input,select');})) return 'bf_test';
   if(q('form [name="manufacturer"]')&&q('form [name="type_code"]')) return 'bf_tag';
-  if(/result \(provided by tester\)/i.test(document.body.innerText||'')) return 'bf_result';
+  if(/backflowid/i.test(location.hostname)&&/\/backflow\/tests?\/[0-9a-f-]{8,}/i.test(location.pathname)&&!q('form-input input,form-input select')) return 'bf_result';
+  if(/result \(provided by tester\)|result \(calculated\)/i.test(document.body.innerText||'')) return 'bf_result';
   if(/backflowid/i.test(location.hostname)) return 'bf_other';
   return 'other';
 }
@@ -282,6 +283,7 @@ root.innerHTML='<style>'+
 '<div class="b"><div class="pk" id="pk"></div><div class="msg" id="msg"></div>'+
 '<div id="paste" style="display:none"><div style="font-size:12px">Long-press below, Paste, then Use.</div><textarea id="ta"></textarea><button class="x" id="use" style="width:100%">Use</button></div>'+
 '<div class="row" style="margin-bottom:6px"><button class="x p" id="go"></button></div>'+
+'<div class="row" id="threw" style="margin-bottom:6px;display:none"><button class="x o" id="th">Tradehack →</button></div>'+
 '<div class="row"><button class="x" id="ld">📋 Load test</button><button class="x" id="mp" title="Copy this page\'s field list">🗺 Map</button></div>'+
 '</div></div>';
 var $=function(id){return root.getElementById(id);};
@@ -357,8 +359,20 @@ page=detect();
 filled=0;missed=[];say('');
 go.className='x p';
 $('t').textContent='BF Fill · '+(titles[page]||'');
-if(IN_APP&&/other$/.test(page)) $('w').classList.add('min'); else $('w').classList.remove('min');
+var _pk=packet||appPacket();
+var _bf=/^bf_/.test(page);
+$('threw').style.display=(_bf&&page!=='bf_result'&&_pk&&_pk.tradehack!==false)?'flex':'none';
+if(IN_APP&&/other$/.test(page)&&!(_bf&&_pk)) $('w').classList.add('min'); else $('w').classList.remove('min');
 
+function goTradehack(){withPacket(function(p){
+  if(p.tradehack===false){say('Tradehack is turned off in FieldPass settings.','inf');return;}
+  var url='https://my.tradehack.com.au/search/?q='+encodeURIComponent(p.serial);
+  var open=function(){location.href=url;};
+  // put the test back on the clipboard for Tradehack (the app passes it directly)
+  if(IN_APP) return open();
+  (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(packetText(p)):Promise.reject()).then(open,open);
+});}
+$('th').onclick=goTradehack;
 function scrollToEl(el){if(el&&el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'smooth'});}
 
 if(page==='bf_test'){
@@ -375,13 +389,7 @@ if(page==='bf_test'){
 } else if(page==='bf_result'){
   go.textContent='Tradehack →';
   go.className='x o';
-  go.onclick=function(){withPacket(function(p){
-    if(p.tradehack===false){say('Tradehack is turned off in FieldPass settings.','inf');return;}
-    var url='https://my.tradehack.com.au/search/?q='+encodeURIComponent(p.serial);
-    var open=function(){location.href=url;};
-    // put the test back on the clipboard for Tradehack
-    (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(packetText(p)):Promise.reject()).then(open,open);
-  });};
+  go.onclick=goTradehack;
   if(packet&&packet.tradehack===false){go.textContent='Done ✓';go.className='x';go.onclick=function(){say('Tradehack is turned off in FieldPass settings — nothing more to do.','ok');};}
 } else if(page==='th_test'){
   go.textContent='⚡ Fill test';
